@@ -76,10 +76,10 @@ class Body {
     }
 
     popMatrix();
-    
+
     if (this == toFollow) {
       fill(50);
-      textSize(8);
+      textSize(10);
       text(name + " (" + hungerToS() + ")", location.x + r, location.y + 2);
     }
   }
@@ -107,17 +107,11 @@ class Body {
     if (mateWeight < 0) { 
       mateWeight = 0;
     }
-    //mateWeight = 2.5;
     PVector mateDance = matingDance();
-    //PVector mateDance = seekFatest();
     mateDance.mult(mateWeight);
     applyForce(mateDance);
 
     mate();
-
-    //    if (mateWeight > 1) { 
-    //      obstacleWeight = 0;
-    //    }
 
     hunger += .005;
 
@@ -128,7 +122,6 @@ class Body {
     else {
       mateWeight = 0;
       hungry = true;
-      //r -= .01;
     }
 
 
@@ -136,21 +129,13 @@ class Body {
     obstacleVector.mult(hungry ? hunger : 3);
     applyForce(obstacleVector);
 
-    //seekVector = seek(new PVector(mouseX, mouseY));
-    //seekVector.mult(seekWeight);
-    //applyForce(seekVector);
-
     wanderVector = wander();
     wanderVector.mult(wanderWeight);
     applyForce(wanderVector);
 
-    PVector sep = separate();   // Separation
+    PVector sep = separate();
     sep.mult(2.5 - mateWeight);
     applyForce(sep);
-    
-    if (flocking) {
-      flock();
-    }
   }
 
   PVector steer(PVector desired) {

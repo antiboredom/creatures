@@ -1,14 +1,17 @@
+/* @pjs pauseOnBlur=true; 
+ */
+
 ArrayList<Body> bodies = new ArrayList<Body>();
 Map m;
-float sc = 2;
+float sc = 1.5;
 boolean follow = false, flocking = false;
 int follower = 0;
 Body toFollow;
 String names[];
 
 void setup() {
-  size(1280, 720, P3D);
-  //size(900, 500, P3D);
+  //size(1280, 720, P3D);
+  size(640, 480);
   
 
   names = loadStrings("names.txt");
@@ -40,7 +43,7 @@ void draw() {
   m.display();
   for (int i = bodies.size() - 1; i >= 0; i--) {
     Body b = bodies.get(i);
-    //b.run();
+    b.run();
 
     if (b.pregnant) {
       Body baby = new Body(b.location.x, b.location.y, names[int(random(0, names.length-1))]);
@@ -51,7 +54,6 @@ void draw() {
     }
     
     if (toFollow != b && !b.alive && bodies.size() > i) {
-      
       println(b.name + " has died of " + (b.age > 4800 ? "old age" : "hunger. RIP."));
       m.regrow(b.location.x, b.location.y);      
       bodies.remove(i);
@@ -62,7 +64,6 @@ void draw() {
   if (bodies.size() > 100) {
     Body b = bodies.get(100);
     println(b.name + " has died. RIP");
-    m.regrow(b.location.x, b.location.y);      
     bodies.remove(100);
   }
 }
@@ -122,7 +123,7 @@ void keyPressed() {
 }
 
 
-void mouseDragged() {
+void mousePressed() {
   m.plant(mouseX, mouseY);
 }
 
@@ -204,10 +205,10 @@ class Body {
     }
 
     popMatrix();
-    
+
     if (this == toFollow) {
       fill(50);
-      textSize(8);
+      textSize(10);
       text(name + " (" + hungerToS() + ")", location.x + r, location.y + 2);
     }
   }
@@ -235,17 +236,11 @@ class Body {
     if (mateWeight < 0) { 
       mateWeight = 0;
     }
-    //mateWeight = 2.5;
     PVector mateDance = matingDance();
-    //PVector mateDance = seekFatest();
     mateDance.mult(mateWeight);
     applyForce(mateDance);
 
     mate();
-
-    //    if (mateWeight > 1) { 
-    //      obstacleWeight = 0;
-    //    }
 
     hunger += .005;
 
@@ -256,7 +251,6 @@ class Body {
     else {
       mateWeight = 0;
       hungry = true;
-      //r -= .01;
     }
 
 
@@ -264,21 +258,13 @@ class Body {
     obstacleVector.mult(hungry ? hunger : 3);
     applyForce(obstacleVector);
 
-    //seekVector = seek(new PVector(mouseX, mouseY));
-    //seekVector.mult(seekWeight);
-    //applyForce(seekVector);
-
     wanderVector = wander();
     wanderVector.mult(wanderWeight);
     applyForce(wanderVector);
 
-    PVector sep = separate();   // Separation
+    PVector sep = separate();
     sep.mult(2.5 - mateWeight);
     applyForce(sep);
-    
-    if (flocking) {
-      flock();
-    }
   }
 
   PVector steer(PVector desired) {
@@ -624,7 +610,7 @@ class Map {
     h = _h;
     rows = width/cellsize;
     cols = width/cellsize;
-    buffer = createGraphics(w, h, P3D);
+    buffer = createGraphics(w, h);
     writeBuffer();
   }
 
@@ -655,22 +641,22 @@ class Map {
   void writeBuffer() {
     buffer.beginDraw();
     buffer.background(bg);
-    
-//    buffer.noFill();
-//    buffer.stroke(0);
-//    buffer.rect(0, 0, width-1, height-1);
-//    
-//    buffer.noStroke();
-//    buffer.fill(0, 200, 0, 100);
-//    for (int x = 0; x < width; x+=cellsize) {
-//      for (int y = 0; y < height; y+=cellsize) {
-//        if (random(1) < .1) {
-//          buffer.ellipse(x, y, cellsize, cellsize);
-//          
-//        }
-//      }
-//    }
+
+    buffer.noFill();
+    buffer.stroke(0);
+    buffer.rect(0, 0, width-1, height-1);
+
+    buffer.noStroke();
+    buffer.fill(0, 200, 0, 100);
+    for (int x = 0; x < width; x+=cellsize) {
+      for (int y = 0; y < height; y+=cellsize) {
+        if (random(1) < .1) {
+          buffer.ellipse(x, y, cellsize, cellsize);
+        }
+      }
+    }
     buffer.endDraw();
+    buffer.loadPixels();
   }
 
   void regrow(float x, float y) {
@@ -679,20 +665,16 @@ class Map {
     buffer.fill(0, 200, 0, 100);
     buffer.ellipse(x, y, cellsize, cellsize);
     buffer.endDraw();
+    buffer.loadPixels();
   }
 
   void plant(float x, float y) {
-    buffer.beginDraw();
-    buffer.noStroke();
-    buffer.fill(0, 200, 0, 100);
-    buffer.ellipse(x, y, cellsize, cellsize);
-    buffer.endDraw();
+    regrow(x, y);
   }
 
   void display() {
     buffer.updatePixels();
     image(buffer, 0, 0, w, h);
-    //text(int(mouseX) + "," + int(mouseY) + "," + brightness(buffer.get(mouseX, mouseY)), 10, 10);
   }
 }
 

@@ -1,14 +1,17 @@
+/* @pjs pauseOnBlur=true; 
+ */
+
 ArrayList<Body> bodies = new ArrayList<Body>();
 Map m;
-float sc = 2;
+float sc = 1.5;
 boolean follow = false, flocking = false;
 int follower = 0;
 Body toFollow;
 String names[];
 
 void setup() {
-  size(1280, 720, P3D);
-  //size(900, 500, P3D);
+  //size(1280, 720, P3D);
+  size(640, 480);
   
 
   names = loadStrings("names.txt");
@@ -51,7 +54,6 @@ void draw() {
     }
     
     if (toFollow != b && !b.alive && bodies.size() > i) {
-      
       println(b.name + " has died of " + (b.age > 4800 ? "old age" : "hunger. RIP."));
       m.regrow(b.location.x, b.location.y);      
       bodies.remove(i);
@@ -62,7 +64,6 @@ void draw() {
   if (bodies.size() > 100) {
     Body b = bodies.get(100);
     println(b.name + " has died. RIP");
-    m.regrow(b.location.x, b.location.y);      
     bodies.remove(100);
   }
 }
@@ -122,7 +123,7 @@ void keyPressed() {
 }
 
 
-void mouseDragged() {
+void mousePressed() {
   m.plant(mouseX, mouseY);
 }
 

@@ -42,22 +42,22 @@ class Map {
   void writeBuffer() {
     buffer.beginDraw();
     buffer.background(bg);
-    
+
     buffer.noFill();
     buffer.stroke(0);
     buffer.rect(0, 0, width-1, height-1);
-    
+
     buffer.noStroke();
     buffer.fill(0, 200, 0, 100);
     for (int x = 0; x < width; x+=cellsize) {
       for (int y = 0; y < height; y+=cellsize) {
         if (random(1) < .1) {
           buffer.ellipse(x, y, cellsize, cellsize);
-          
         }
       }
     }
     buffer.endDraw();
+    buffer.loadPixels();
   }
 
   void regrow(float x, float y) {
@@ -66,20 +66,16 @@ class Map {
     buffer.fill(0, 200, 0, 100);
     buffer.ellipse(x, y, cellsize, cellsize);
     buffer.endDraw();
+    buffer.loadPixels();
   }
 
   void plant(float x, float y) {
-    buffer.beginDraw();
-    buffer.noStroke();
-    buffer.fill(0, 200, 0, 100);
-    buffer.ellipse(x, y, cellsize, cellsize);
-    buffer.endDraw();
+    regrow(x, y);
   }
 
   void display() {
     buffer.updatePixels();
     image(buffer, 0, 0, w, h);
-    //text(int(mouseX) + "," + int(mouseY) + "," + brightness(buffer.get(mouseX, mouseY)), 10, 10);
   }
 }
 
