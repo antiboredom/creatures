@@ -42,23 +42,24 @@ class Body {
     pushMatrix();
     translate(location.x, location.y);
     rotate(velocity.heading2D());
+
+    //body
     noStroke();
+    //fill(100, map(age, 0, 4800, 100, 130), 100);
     fill(100);
-    //    ellipse(location.x, location.y, r, r);
     ellipse(0, 0, r, r);
 
+    //tail
     fill(255, 0, 0);
-    //PVector targ = PVector.add(location, PVector.mult(velocity, 15));
     float vel = velocity.mag() * 10;
     ellipse(-vel, 0, 2, 2);
     stroke(100);
     line(-r/2, 0, -vel, 0);
 
+    //eyes
     fill(255);
-
-    ellipse(2, -3, 4, 4);//, location.x + 3, location.y);
+    ellipse(2, -3, 4, 4);
     ellipse(2, 3, 4, 4);
-    //translate(-location.x, -location.y);
 
     if (hunger > 5) { 
       fill(200, 0, 0, 100); 
@@ -76,11 +77,14 @@ class Body {
     }
 
     popMatrix();
-    
-    if (this == toFollow) {
+
+    if (this == toFollow || showAllLabels) {
       fill(50);
-      textSize(8);
-      text(name + " (" + hungerToS() + ")", location.x + r, location.y + 2);
+      textSize(10);
+      //text(name + "\n" + hungerToS() + " " + ageToS(), location.x + r, location.y);
+      text(name, location.x + r, location.y);
+      textSize(9);
+      text(hungerToS() + " " + ageToS(), location.x + r, location.y + 12);
     }
   }
 
@@ -147,7 +151,7 @@ class Body {
     PVector sep = separate();   // Separation
     sep.mult(2.5 - mateWeight);
     applyForce(sep);
-    
+
     if (flocking) {
       flock();
     }
@@ -180,6 +184,44 @@ class Body {
     return toReturn;
   }
 
+  String ageToS() {
+    String toReturn = "new born";
+    if (age > 0 && age < 400) {
+      return "infant";
+    } 
+
+    else if (age > 400 && age < 800) {
+      return "toddler";
+    }
+    else if (age > 800 && age < 1200) {
+      return "child";
+    }
+    else if (age > 1200 && age < 1600) {
+      return "adolescent";
+    }
+    else if (age > 1600 && age < 2000) {
+      return "young adult";
+    }
+    else if (age > 2000 && age < 3000) {
+      return "adult";
+    }
+    else if (age > 3000 && age < 3800) {
+      return "middle-aged";
+    }
+    else if (age > 3800 && age < 4400) {
+      return "senior citizen";
+    }
+    else if (age > 4400 && age < 4600) {
+      return "rapidly degenerating";
+    }
+    else if (age > 4600) {
+      return "ready to die";
+    }
+
+
+    return toReturn;
+  }
+
   void go(String dir) {
     if (dir == "up") {
       applyForce(new PVector(0, -10));
@@ -199,8 +241,6 @@ class Body {
     for (Body b : bodies) {
       if (millis() - lastPregnant > 1000 && millis() - bornAt > 10000 && b != this && location.dist(b.location) < 10 && random(1) > .5) {
         println(name + " and " + b.name + " have mated!");
-        //Body baby = new Body(location.x, location.y, names[int(random(0, names.length-1))]);
-        //bodies.add(baby);
         pregnant = true;
         lastPregnant = millis();
       }

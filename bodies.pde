@@ -1,7 +1,8 @@
 ArrayList<Body> bodies = new ArrayList<Body>();
+MessageList messages = new MessageList();
 Map m;
 float sc = 2;
-boolean follow = false, flocking = false;
+boolean follow = false, flocking = false, looping = false, showAllLabels;
 int follower = 0;
 Body toFollow;
 String names[];
@@ -9,7 +10,6 @@ String names[];
 void setup() {
   size(1280, 720, P3D);
   //size(900, 500, P3D);
-  
 
   names = loadStrings("names.txt");
   for (int i = 0; i < 30; i ++) {
@@ -19,6 +19,7 @@ void setup() {
     bodies.add(b);
   }
   m = new Map(width, height);
+  noLoop();
 }
 
 
@@ -36,7 +37,7 @@ void draw() {
   //translate(width/2, height/2);
 
   background(200);
-  
+
   m.display();
   for (int i = bodies.size() - 1; i >= 0; i--) {
     Body b = bodies.get(i);
@@ -49,21 +50,27 @@ void draw() {
       bodies.add(baby);
       b.pregnant = false;
     }
-    
+
     if (toFollow != b && !b.alive && bodies.size() > i) {
-      
       println(b.name + " has died of " + (b.age > 4800 ? "old age" : "hunger. RIP."));
       m.regrow(b.location.x, b.location.y);      
       bodies.remove(i);
     }
-    
   }
-  
-  if (bodies.size() > 100) {
-    Body b = bodies.get(100);
-    println(b.name + " has died. RIP");
-    m.regrow(b.location.x, b.location.y);      
-    bodies.remove(100);
+
+  //  String str = "";
+  //  
+  //  for (int i = 0; i < 30; i++) {
+  //    str += "hello" + i + "\n";
+  //  }
+  //  
+  //  text(str, width - 100, height - 100, 100, 100);
+
+  if (bodies.size() > 50) {
+    //Body b = bodies.get(50);
+    //println(b.name + " has died. RIP");
+    //m.regrow(b.location.x, b.location.y);      
+    bodies.remove(50);
   }
 }
 
@@ -119,10 +126,32 @@ void keyPressed() {
   if (keyCode == 39) {
     toFollow.go("right");
   }
+
+  if (keyCode == 80) {
+    looping = !looping;
+    if (looping) { 
+      loop();
+    }
+    else { 
+      noLoop();
+    }
+  }
+
+  if (keyCode == 73) {
+    showAllLabels = !showAllLabels;
+  }
 }
 
 
 void mouseDragged() {
   m.plant(mouseX, mouseY);
+}
+
+void drawMessages() {
+}
+
+void addmsg(String msg) {
+  //messages.add(msg);
+  //if (messages.size() > 10) { messages.remove(0); }
 }
 
