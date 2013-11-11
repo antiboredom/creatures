@@ -2,7 +2,7 @@ ArrayList<Body> bodies = new ArrayList<Body>();
 MessageList messages = new MessageList();
 Map m;
 float sc = 2;
-boolean follow = false, flocking = false, looping = false, showAllLabels;
+boolean follow = false, flocking = false, looping = true, showAllLabels = false;
 int follower = 0;
 Body toFollow;
 String names[];
@@ -19,7 +19,6 @@ void setup() {
     bodies.add(b);
   }
   m = new Map(width, height);
-  noLoop();
 }
 
 
@@ -30,6 +29,7 @@ void draw() {
   toFollow = bodies.get(follower);
   if (follow) {
     scale(sc);
+    //translate((toFollow.location.x - width/(2*sc))*-1, (toFollow.location.y - height/(2*sc))*-1, sc * 100);
     translate((toFollow.location.x - width/(2*sc))*-1, (toFollow.location.y - height/(2*sc))*-1);
   }
   //rotate(bodies.get(0).velocity.heading2D()*-1);
@@ -72,6 +72,9 @@ void draw() {
     //m.regrow(b.location.x, b.location.y);      
     bodies.remove(50);
   }
+  fill(0);
+  textSize(12);
+  text(frameRate, 20, 20);
 }
 
 void mouseWheel(MouseEvent event) {

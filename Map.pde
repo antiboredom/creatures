@@ -79,7 +79,6 @@ class Map {
   void display() {
     buffer.updatePixels();
     image(buffer, 0, 0, w, h);
-    //text(int(mouseX) + "," + int(mouseY) + "," + brightness(buffer.get(mouseX, mouseY)), 10, 10);
   }
 }
 
