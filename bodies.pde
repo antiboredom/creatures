@@ -11,7 +11,7 @@ Body toFollow;
 String names[];
 
 void setup() {
-  size(640, 480);
+  size(1280, 720);
 
   names = loadStrings("names.txt");
   for (int i = 0; i < 30; i ++) {

@@ -2,17 +2,16 @@
  */
 
 ArrayList<Body> bodies = new ArrayList<Body>();
+MessageList messages = new MessageList();
 Map m;
 float sc = 1.5;
-boolean follow = false, flocking = false;
+boolean follow = false, flocking = false, looping = true, showAllLabels = false;
 int follower = 0;
 Body toFollow;
 String names[];
 
 void setup() {
-  //size(1280, 720, P3D);
-  size(640, 480);
-  
+  size(1280, 720);
 
   names = loadStrings("names.txt");
   for (int i = 0; i < 30; i ++) {
@@ -32,6 +31,7 @@ void draw() {
   toFollow = bodies.get(follower);
   if (follow) {
     scale(sc);
+    //translate((toFollow.location.x - width/(2*sc))*-1, (toFollow.location.y - height/(2*sc))*-1, sc * 100);
     translate((toFollow.location.x - width/(2*sc))*-1, (toFollow.location.y - height/(2*sc))*-1);
   }
   //rotate(bodies.get(0).velocity.heading2D()*-1);
@@ -39,7 +39,7 @@ void draw() {
   //translate(width/2, height/2);
 
   background(200);
-  
+
   m.display();
   for (int i = bodies.size() - 1; i >= 0; i--) {
     Body b = bodies.get(i);
@@ -52,20 +52,20 @@ void draw() {
       bodies.add(baby);
       b.pregnant = false;
     }
-    
+
     if (toFollow != b && !b.alive && bodies.size() > i) {
       println(b.name + " has died of " + (b.age > 4800 ? "old age" : "hunger. RIP."));
       m.regrow(b.location.x, b.location.y);      
       bodies.remove(i);
     }
-    
   }
-  
-  if (bodies.size() > 100) {
-    Body b = bodies.get(100);
-    println(b.name + " has died. RIP");
-    bodies.remove(100);
+
+  if (bodies.size() > 50) {
+    bodies.remove(50);
   }
+  fill(0);
+  textSize(12);
+  text(frameRate, 20, 20);
 }
 
 void mouseWheel(MouseEvent event) {
@@ -120,11 +120,33 @@ void keyPressed() {
   if (keyCode == 39) {
     toFollow.go("right");
   }
+
+  if (keyCode == 80) {
+    looping = !looping;
+    if (looping) { 
+      loop();
+    }
+    else { 
+      noLoop();
+    }
+  }
+
+  if (keyCode == 73) {
+    showAllLabels = !showAllLabels;
+  }
 }
 
 
 void mousePressed() {
   m.plant(mouseX, mouseY);
+}
+
+void drawMessages() {
+}
+
+void addmsg(String msg) {
+  //messages.add(msg);
+  //if (messages.size() > 10) { messages.remove(0); }
 }
 
 class Body {
@@ -171,23 +193,24 @@ class Body {
     pushMatrix();
     translate(location.x, location.y);
     rotate(velocity.heading2D());
+
+    //body
     noStroke();
+    //fill(100, map(age, 0, 4800, 100, 130), 100);
     fill(100);
-    //    ellipse(location.x, location.y, r, r);
     ellipse(0, 0, r, r);
 
+    //tail
     fill(255, 0, 0);
-    //PVector targ = PVector.add(location, PVector.mult(velocity, 15));
     float vel = velocity.mag() * 10;
     ellipse(-vel, 0, 2, 2);
     stroke(100);
     line(-r/2, 0, -vel, 0);
 
+    //eyes
     fill(255);
-
-    ellipse(2, -3, 4, 4);//, location.x + 3, location.y);
+    ellipse(2, -3, 4, 4);
     ellipse(2, 3, 4, 4);
-    //translate(-location.x, -location.y);
 
     if (hunger > 5) { 
       fill(200, 0, 0, 100); 
@@ -206,10 +229,13 @@ class Body {
 
     popMatrix();
 
-    if (this == toFollow) {
+    if (this == toFollow || showAllLabels) {
       fill(50);
       textSize(10);
-      text(name + " (" + hungerToS() + ")", location.x + r, location.y + 2);
+      //text(name + "\n" + hungerToS() + " " + ageToS(), location.x + r, location.y);
+      text(name, location.x + r, location.y);
+      textSize(9);
+      text(hungerToS() + " " + ageToS(), location.x + r, location.y + 12);
     }
   }
 
@@ -294,6 +320,44 @@ class Body {
     return toReturn;
   }
 
+  String ageToS() {
+    String toReturn = "new born";
+    if (age > 0 && age < 400) {
+      return "infant";
+    } 
+
+    else if (age > 400 && age < 800) {
+      return "toddler";
+    }
+    else if (age > 800 && age < 1200) {
+      return "child";
+    }
+    else if (age > 1200 && age < 1600) {
+      return "adolescent";
+    }
+    else if (age > 1600 && age < 2000) {
+      return "young adult";
+    }
+    else if (age > 2000 && age < 3000) {
+      return "adult";
+    }
+    else if (age > 3000 && age < 3800) {
+      return "middle-aged";
+    }
+    else if (age > 3800 && age < 4400) {
+      return "senior citizen";
+    }
+    else if (age > 4400 && age < 4600) {
+      return "rapidly degenerating";
+    }
+    else if (age > 4600) {
+      return "ready to die";
+    }
+
+
+    return toReturn;
+  }
+
   void go(String dir) {
     if (dir == "up") {
       applyForce(new PVector(0, -10));
@@ -313,8 +377,6 @@ class Body {
     for (Body b : bodies) {
       if (millis() - lastPregnant > 1000 && millis() - bornAt > 10000 && b != this && location.dist(b.location) < 10 && random(1) > .5) {
         println(name + " and " + b.name + " have mated!");
-        //Body baby = new Body(location.x, location.y, names[int(random(0, names.length-1))]);
-        //bodies.add(baby);
         pregnant = true;
         lastPregnant = millis();
       }
@@ -675,6 +737,39 @@ class Map {
   void display() {
     buffer.updatePixels();
     image(buffer, 0, 0, w, h);
+  }
+}
+
+class Message {
+  int displayedAt;
+  String msg;
+  
+  Message(String _msg) {
+   msg = _msg; 
+  }
+  
+  boolean expired() {
+   return false; 
+  }
+}
+
+class MessageList {
+  ArrayList<Message> messages = new ArrayList<Message>();
+  int limit = 10;
+
+  void run() {
+    for (int i = limit-1; i >= 0; i--) {
+      if (messages.get(i).expired()) { 
+        messages.remove(i);
+      }
+    }
+  }
+
+  void addMessage(String msg) {
+    messages.add(new Message(msg));
+    if (messages.size() > 10) { 
+      messages.remove(0);
+    }
   }
 }
 
