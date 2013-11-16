@@ -24,7 +24,7 @@ function Body(x, y, name) {
 
 Body.prototype.update = function() {
   this.age ++;
-  if ((this.age > 4800 || this.hunger > 10) && random(1) > .5 && this.toFollow != this) { 
+  if ((this.age > 4800 || this.hunger > 10) && random(1) > .5 && toFollow != this) { 
     this.alive = false;
   }
 
@@ -63,7 +63,7 @@ Body.prototype.display = function() {
     ellipse(0, 0, this.r+3, this.r+3);
   }
 
-  if (this == this.toFollow) {
+  if (this == toFollow) {
     noStroke();
     fill(0, 150, 255, 100);
     if (this.hunger > 5) { 
@@ -74,7 +74,7 @@ Body.prototype.display = function() {
 
   popMatrix();
 
-  if (this == this.toFollow || showAllLabels) {
+  if (this == toFollow || showAllLabels) {
     fill(50);
     textSize(10);
     text(this.name, this.location.x + this.r, this.location.y);
@@ -90,9 +90,9 @@ Body.prototype.run = function() {
 }
 
 Body.prototype.eat = function(x, y) {
-  this.r += .005;
-  m.clearPixel(x, y);
-  this.hunger -= .01;
+  //this.r += .005;
+  //m.clearPixel(x, y);
+  //this.hunger -= .01;
 }
 
 Body.prototype.applyForce = function(force) {
@@ -121,9 +121,9 @@ Body.prototype.applyBehaviors = function() {
     this.hungry = true;
   }
 
-  this.obstacleVector = this.obstacleSeparation();
-  this.obstacleVector.mult(this.hungry ? this.hunger : 3);
-  this.applyForce(this.obstacleVector);
+  //this.obstacleVector = this.obstacleSeparation();
+  //this.obstacleVector.mult(this.hungry ? this.hunger : 3);
+  //this.applyForce(this.obstacleVector);
 
   this.wanderVector = this.wander();
   this.wanderVector.mult(this.wanderWeight);
@@ -366,7 +366,7 @@ Body.prototype.separate = function() {
   var count = 0;
   // For every boid in the system, check if it's too close
   for (var i = 0; i < bodies.length; i++) {
-    var b = bodies[i];
+    var other = bodies[i];
     var d = PVector.dist(this.location, other.location);
     // If the distance is greater than 0 and less than an arbitrary amount (0 when you are yourself)
     if ((d > 0) && (d < desiredseparation)) {

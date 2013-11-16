@@ -6,22 +6,30 @@ function Map(w, h) {
   this.h = h;
   this.rows = width/this.cellsize;
   this.cols = width/this.cellsize;
-  this.buffer = createGraphics(w, h);
+  this.buffer = createGraphics(w, h, false, "buffer");
   this.writeBuffer();
+  document.getElementById('buffer').style.display = 'none';
 }
 
 Map.prototype.blocked = function(x, y) {
+  context(this.buffer);
   var future = y * width + x;
-  if (future > 0 && future < this.buffer.pixels.length && brightness(this.buffer.pixels[future]) < 230) {
-    return true;
+  var p = pixels[future];
+  var toReturn;
+  if (future > 0 && future < pixels.length && brightness(pixels[future]) < 230) {
+    toReturn = true;
   }
   else {
-    return false;
+    toReturn = false;
   }
+  context(canv);
+  return toReturn;
 }
 
 Map.prototype.clearPixel = function(x, y) {
-  this.buffer.pixels[y * width + x] = this.bg;
+  context(this.buffer);
+  pixels[y * width + x] = this.bg;
+  context(canv);
 }
 
 Map.prototype.writeBuffer = function() {
@@ -61,5 +69,9 @@ Map.prototype.display = function() {
   context(this.buffer);
   updatePixels();
   context(canv);
+  var ctx = this.buffer.elt.getContext('2d');
+  var img = ctx.getImageData(0, 0, this.w, this.h);
+  ctx = canv.elt.getContext('2d'); 
+  ctx.putImageData(img, 0, 0);
   //image(this.buffer, 0, 0, this.w, this.h);
 }

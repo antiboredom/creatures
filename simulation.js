@@ -9,25 +9,29 @@ var follow = false, flocking = false, looping = true, showAllLabels = false;
 var follower = 0;
 var toFollow;
 
-function setup() {
-  canv = createGraphics(1280, 720);
+function preload() {
 
-  names = loadStrings("names.txt");
-  for (var i = 0; i < 30; i ++) {
-    b = new Body(random(width), random(height), names[parseInt(random(0, names.length-1))]);
-    b.r = random(10, 20);
-    b.age = parseInt(random(0, 1000));
-    bodies.push(b);
-  }
-  m = new Map(width, height);
+  names = loadStrings("data/names.txt");
+
+}
+function setup() {
+  canv = createGraphics(1280, 720, true);
+    for (var i = 0; i < 30; i ++) {
+      b = new Body(random(width), random(height), names[parseInt(random(0, names.length-1))]);
+      b.r = random(10, 20);
+      b.age = parseInt(random(0, 1000));
+      bodies.push(b);
+    }
+    m = new Map(width, height);
+    context(canv);
 }
 
 
 function draw() {
-  if (follower > bodies.size() - 1) { 
+  if (follower > bodies.length - 1) { 
     follower = 0;
   }
-  toFollow = bodies.get(follower);
+  toFollow = bodies[follower];
   if (follow) {
     scale(sc);
     translate((toFollow.location.x - width/(2*sc))*-1, (toFollow.location.y - height/(2*sc))*-1);
@@ -36,26 +40,26 @@ function draw() {
   background(200);
 
   m.display();
-  for (var i = bodies.size() - 1; i >= 0; i--) {
+  for (var i = bodies.length - 1; i >= 0; i--) {
     var b = bodies[i];
     b.run();
 
     if (b.pregnant) {
-      var baby = new Body(b.location.x, b.location.y, names[int(random(0, names.length-1))]);
+      var baby = new Body(b.location.x, b.location.y, names[parseInt(random(0, names.length-1))]);
       println(baby.name + " is born");
 
       bodies.push(baby);
       b.pregnant = false;
     }
 
-    if (toFollow != b && !b.alive && bodies.size() > i) {
+    if (toFollow != b && !b.alive && bodies.length > i) {
       println(b.name + " has died of " + (b.age > 4800 ? "old age" : "hunger. RIP."));
-      m.regrow(b.location.x, b.location.y);      
+      m.regrow(b.location.x, b.location.y);
       bodies.splice(i, 1);
     }
   }
 
-  if (bodies.size() > 50) {
+  if (bodies.length > 50) {
     bodies.splice(50, 1);
   }
   fill(0);
@@ -84,11 +88,11 @@ function keyReleased() {
   if (keyCode == 75) {
     follower --;
   }
-  if (follower >= bodies.size()) { 
+  if (follower >= bodies.length) { 
     follower = 0;
   }
   if (follower < 0) { 
-    follower = bodies.size() -1;
+    follower = bodies.length -1;
   }
 
   if (keyCode == 78) {
@@ -130,5 +134,5 @@ function keyPressed() {
 
 
 function mousePressed() {
-  m.plant(mouseX, mouseY);
+  //m.plant(mouseX, mouseY);
 }
