@@ -11,7 +11,7 @@ if (typeof isServer != 'undefined' && isServer == true){
   //window = {};
   screen = {};
 
-  p5 = require('./p5.js/dist/p5.js');
+  p5 = require('./p5/dist/p5.js');
   Body = require(__dirname + '/body.js');
   width = 1280;
   height = 720;
