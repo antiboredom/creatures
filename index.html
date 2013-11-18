@@ -1,9 +1,36 @@
 <html>
 <head>
-	<script language="javascript" type="text/javascript" src="p5.js"></script>
+<script type="text/javascript" charset="utf-8">
+  var p5 = window;  
+</script>
+	<script language="javascript" type="text/javascript" src="p5.js/dist/p5.js"></script>
 	<script language="javascript" type="text/javascript" src="body.js"></script>
 	<script language="javascript" type="text/javascript" src="map.js"></script>
 	<script language="javascript" type="text/javascript" src="simulation.js"></script>
+
+  <script src="http://localhost:8000/socket.io/socket.io.js"></script>
+  <script>
+    var socket = io.connect('http://localhost:8000');
+    socket.on('setup', function(data) {
+      for (var i = 0; i < data.bodies.length; i ++) {
+        var b = data.bodies[i];
+        bodies.push(new Body(b.location.x, b.location.y, b.name));
+      }
+    });
+    socket.on('updates', function (data) {
+      for (var i = 0; i < data.bodies.length; i ++) {
+        var b = data.bodies[i];
+        bodies[i].location.x = b.location.x;
+        bodies[i].location.y = b.location.y;
+        bodies[i].velocity.x = b.velocity.x;
+        bodies[i].velocity.y = b.velocity.y;
+      }
+      //console.log('hiii');
+      //console.log(data);
+      //socket.emit('my other event', { my: 'data' });
+    });
+  </script>
+
 </head>
 
 <body>

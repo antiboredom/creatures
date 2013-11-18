@@ -1,7 +1,16 @@
+if (typeof isServer != 'undefined' && isServer == true) {
+  random = p5.random;
+  PVector = p5.PVector;
+  millis = p5.millis;
+  cos = p5.cos;
+  sin = p5.sin;
+  println = p5.println;
+}
+
 function Body(x, y, name) {
   this.r = 10;
   this.location = new PVector(x, y);
-  this.maxspeed = random(1, 2);
+  this.maxspeed = p5.random(1, 2);
   this.maxforce = .1;
   this.acceleration = new PVector(0, 0);
   this.velocity = new PVector(0, 0);
@@ -14,7 +23,7 @@ function Body(x, y, name) {
   this.wandertheta = 0;
   this.lastPregnant = 0;
   this.hungry = true;
-  this.hunger = random(0, 2);
+  this.hunger = p5.random(0, 2);
   this.mateTheta = 0;
   this.bornAt = millis();
   this.alive = true;
@@ -24,8 +33,8 @@ function Body(x, y, name) {
 
 Body.prototype.update = function() {
   this.age ++;
-  if ((this.age > 4800 || this.hunger > 10) && random(1) > .5 && toFollow != this) { 
-    this.alive = false;
+  if ((this.age > 4800 || this.hunger > 10) && p5.random(1) > .5) { 
+    //this.alive = false;
   }
 
   this.velocity.add(this.acceleration);
@@ -33,6 +42,56 @@ Body.prototype.update = function() {
   this.location.add(this.velocity);
   this.borders();
   this.acceleration.mult(0);
+}
+
+Body.prototype.runOnServer = function(bodies) {
+  this.applyBehaviors(bodies);
+  this.update();
+}
+
+Body.prototype.run = function(bodies) {
+  //this.applyBehaviors(bodies);
+  this.update();
+  this.display();
+}
+
+Body.prototype.applyForce = function(force) {
+  // We could add mass here if we want A = F / M
+  this.acceleration.add(force);
+}
+
+Body.prototype.applyBehaviors = function(bodies) {
+  this.mateWeight = 2.5 - this.hunger;
+  if (this.mateWeight < 0) { 
+    this.mateWeight = 0;
+  }
+  var mateDance = this.matingDance(bodies);
+  mateDance.mult(this.mateWeight);
+  this.applyForce(mateDance);
+
+  this.mate(bodies);
+
+  this.hunger += .005;
+
+  if (this.hunger < 1) {
+    this.mateWeight = 1;
+    this.hungry = false;
+  } else {
+    this.mateWeight = 0;
+    this.hungry = true;
+  }
+
+  //this.obstacleVector = this.obstacleSeparation();
+  //this.obstacleVector.mult(this.hungry ? this.hunger : 3);
+  //this.applyForce(this.obstacleVector);
+
+  this.wanderVector = this.wander();
+  this.wanderVector.mult(this.wanderWeight);
+  this.applyForce(this.wanderVector);
+
+  var sep = this.separate(bodies);
+  sep.mult(2.5 - this.mateWeight);
+  this.applyForce(sep);
 }
 
 Body.prototype.display = function() {
@@ -83,11 +142,6 @@ Body.prototype.display = function() {
   }
 }
 
-Body.prototype.run = function() {
-  this.applyBehaviors();
-  this.update();
-  this.display();
-}
 
 Body.prototype.eat = function(x, y) {
   //this.r += .005;
@@ -95,44 +149,6 @@ Body.prototype.eat = function(x, y) {
   //this.hunger -= .01;
 }
 
-Body.prototype.applyForce = function(force) {
-  // We could add mass here if we want A = F / M
-  this.acceleration.add(force);
-}
-
-Body.prototype.applyBehaviors = function() {
-  this.mateWeight = 2.5 - this.hunger;
-  if (this.mateWeight < 0) { 
-    this.mateWeight = 0;
-  }
-  var mateDance = this.matingDance();
-  mateDance.mult(this.mateWeight);
-  this.applyForce(mateDance);
-
-  this.mate();
-
-  this.hunger += .005;
-
-  if (this.hunger < 1) {
-    this.mateWeight = 1;
-    this.hungry = false;
-  } else {
-    this.mateWeight = 0;
-    this.hungry = true;
-  }
-
-  //this.obstacleVector = this.obstacleSeparation();
-  //this.obstacleVector.mult(this.hungry ? this.hunger : 3);
-  //this.applyForce(this.obstacleVector);
-
-  this.wanderVector = this.wander();
-  this.wanderVector.mult(this.wanderWeight);
-  this.applyForce(this.wanderVector);
-
-  var sep = this.separate();
-  sep.mult(2.5 - this.mateWeight);
-  this.applyForce(sep);
-}
 
 Body.prototype.steer = function(desired) {
   desired.normalize();
@@ -212,11 +228,11 @@ Body.prototype.go = function(dir) {
   }
 }
 
-Body.prototype.mate = function() {
+Body.prototype.mate = function(bodies) {
   for (var i = 0; i < bodies.length; i++) {
     var b = bodies[i];
     if (millis() - this.lastPregnant > 1000 && millis() - this.bornAt > 10000 && b != this && this.location.dist(b.location) < 10 && random(1) > .5) {
-      println(this.name + " and " + b.name + " have mated!");
+      console.log(this.name + " and " + b.name + " have mated!");
       this.pregnant = true;
       this.lastPregnant = millis();
     }
@@ -230,7 +246,7 @@ Body.prototype.matingDance = function() {
   return this.seek(target);
 }
 
-Body.prototype.seekFarthest = function() {
+Body.prototype.seekFarthest = function(bodies) {
   var longestDistance = 0;
   var target = bodies[0];
   for (var i = 0; i < bodies.length; i++) {
@@ -246,7 +262,7 @@ Body.prototype.seekFarthest = function() {
   return this.seek(target.location);
 }
 
-Body.prototype.seekFatest = function() {
+Body.prototype.seekFatest = function(bodies) {
   var target = new PVector();
   var largestBody = 0;
   for (var i = 0; i < bodies.length; i++) {
@@ -360,7 +376,7 @@ Body.prototype.flock = function() {
 
 // Separation
 // Method checks for nearby boids and steers away
-Body.prototype.separate = function() {
+Body.prototype.separate = function(bodies) {
   var desiredseparation = 25.0;
   var steerV = new PVector(0, 0, 0);
   var count = 0;
@@ -396,7 +412,7 @@ Body.prototype.separate = function() {
 
 // Alignment
 // For every nearby boid in the system, calculate the average velocity
-Body.prototype.align = function() {
+Body.prototype.align = function(bodies) {
   var neighbordist = 50;
   var sum = new PVector(0, 0);
   var count = 0;
@@ -423,7 +439,7 @@ Body.prototype.align = function() {
 
 // Cohesion
 // For the average location (i.e. center) of all nearby boids, calculate steering vector towards that location
-Body.prototype.cohesion = function() {
+Body.prototype.cohesion = function(bodies) {
   var neighbordist = 50;
   var sum = new PVector(0, 0);   // Start with empty vector to accumulate all locations
   var count = 0;
@@ -452,3 +468,6 @@ Body.prototype.borders = function() {
   if (this.location.y > height+this.r) this.location.y = -this.r;
 }
 
+if (typeof isServer != 'undefined' && isServer == true) {
+  module.exports = Body;
+}
