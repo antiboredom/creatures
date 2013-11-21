@@ -101,6 +101,7 @@ function draw() {
   }
 
   //socket.emit('fetch', {bufferCount: clientFrames.length, currentMoment: currentFrame});
+
   var frame = clientFrames[frameIndex];
   if (typeof frame == 'undefined') {
     return false;

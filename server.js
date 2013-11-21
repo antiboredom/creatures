@@ -34,7 +34,7 @@ sim.init(function() {
     totalMoments ++;
     if (frames.length > frameBufferLength) {
       frames.shift();
-    } 
+    }
   }, 1000/serverFrameRate);
 
   var io = require('socket.io').listen(8000);
@@ -44,7 +44,7 @@ sim.init(function() {
     var startMoment = totalMoments - frameBufferLength;
     if (startMoment < 0) startMoment = 0;
     socket.emit('setup', { startedAt: startMoment, syncedUntil: startMoment + framesToSync, frames: frames.slice(0, framesToSync*2) });
-    socket.on("fetch", function(data){
+    socket.on("fetch2", function(data){
       var startAt = data.startAt;
       var beginSlice = frameBufferLength - totalMoments - startAt + framesToSync*2;
       var clientFrame = data.currentFrame;
@@ -60,6 +60,12 @@ sim.init(function() {
     });
     //console.log(startMoment);
     //console.log(startMoment + framesToSync);
+    //setInterval(function(){
+      ////var startMoment = totalMoments - frameBufferLength;
+      ////if (startMoment < 0) startMoment = 0;
+      //socket.emit('history', { startedAt: totalMoments - frameBufferLength, frames: frames.slice(0, framesToSync)} );
+      //startMoment = totalMoments;
+    //}, 3000);
     //setInterval(function(){
       ////var startMoment = totalMoments - frameBufferLength;
       ////if (startMoment < 0) startMoment = 0;
