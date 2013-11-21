@@ -1,8 +1,14 @@
 <html>
 <head>
-<script type="text/javascript" charset="utf-8">
-  var p5 = window;  
-</script>
+  <script type="text/javascript" charset="utf-8">
+    var p5 = window;
+    var frameIndex = 0;
+    var clientFrames = [];
+    var startedAt = 0;
+    var syncedUntil = 0;
+    var syncing = true;
+    var currentFrame = 0;
+  </script>
 	<script language="javascript" type="text/javascript" src="p5/dist/p5.js"></script>
 	<script language="javascript" type="text/javascript" src="body.js"></script>
 	<script language="javascript" type="text/javascript" src="map.js"></script>
@@ -11,26 +17,53 @@
   <script src="http://localhost:8000/socket.io/socket.io.js"></script>
   <script>
     var socket = io.connect('http://localhost:8000');
+    //var socket = io.connect('http://sim.jit.su');
     socket.on('setup', function(data) {
-      for (var i = 0; i < data.bodies.length; i ++) {
-        var b = data.bodies[i];
-        bodies.push(new Body(b.location.x, b.location.y, b.name));
+      for (var i = 0; i < data.frames[0].updates.length; i ++) {
+        var b = data.frames[0].updates[i];
+        var b2 = new Body(b.location.x, b.location.y, b.name);
+        updateAttributes(b2, b);
+        bodies.push(b2);
       }
+      clientFrames = data.frames;
+      startedAt = data.startedAt;
+      currentFrame = startedAt;
+      syncedUntil = data.syncedUntil;
+      frameIndex = 0;
+      syncing = false;
     });
-    socket.on('updates', function (data) {
-      for (var i = 0; i < data.bodies.length; i ++) {
-        var b = data.bodies[i];
-        bodies[i].location.x = b.location.x;
-        bodies[i].location.y = b.location.y;
-        bodies[i].velocity.x = b.velocity.x;
-        bodies[i].velocity.y = b.velocity.y;
-      }
-      //console.log('hiii');
-      //console.log(data);
-      //socket.emit('my other event', { my: 'data' });
-    });
-  </script>
 
+//    setInterval(function(){
+//      if (clientFrames.length < 90) {
+//        socket.emit('fetch', {currentFrame: currentFrame, startAt: currentFrame + clientFrames.length});
+//      }
+//    }, 500);
+
+    function cleanupClientFrames(){
+      for (var i = 0; i < clientFrames.length; i ++) {
+        if (typeof clientFrames[i] == "undefined") {
+          clientFrames.splice(i, 1);
+        }
+      }
+    }
+
+    socket.on('history', function (data) {
+      if (typeof data.currentFrame != "undefined") {
+        //currentFrame = data.currentFrame;
+      }
+      if (typeof data.frames != "undefined") {
+        syncedUntil = data.syncedUntil;
+        for (var i = 0; i < data.frames.length; i++) {
+          clientFrames[data.currentFrame - currentFrame + i] = data.frames[i];
+        }
+      }
+    });
+
+  </script>
+  <style type="text/css" media="all">
+    body { background: #333; }
+    canvas {left: 50% !important; margin-left: -640px; top: 50% !important; margin-top: -360px; }
+  </style>
 </head>
 
 <body>

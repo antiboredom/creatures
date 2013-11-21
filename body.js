@@ -51,7 +51,7 @@ Body.prototype.runOnServer = function(bodies) {
 
 Body.prototype.run = function(bodies) {
   //this.applyBehaviors(bodies);
-  this.update();
+  //this.update();
   this.display();
 }
 
@@ -65,7 +65,8 @@ Body.prototype.applyBehaviors = function(bodies) {
   if (this.mateWeight < 0) { 
     this.mateWeight = 0;
   }
-  var mateDance = this.matingDance(bodies);
+  var mateDance = this.matingDance();
+  //this.mateWeight = 2;
   mateDance.mult(this.mateWeight);
   this.applyForce(mateDance);
 
