@@ -1,7 +1,7 @@
 function Map(w, h, withFood) {
   this.w = w;
   this.h = h;
-  this.cellsize = 60;
+  this.cellsize = 80;
   this.rows = width/this.cellsize;
   this.cols = width/this.cellsize;
 
@@ -16,7 +16,9 @@ Map.prototype.plantFood = function() {
   for (var x = 0; x < this.w; x+=this.cellsize) {
     for (var y = 0; y < this.h; y+=this.cellsize) {
       if (random() < .2) {
-        this.food.push(new Food(x, y, this.cellsize));
+        var f = new Food(x, y, this.cellsize);
+        f.age = 1000;
+        this.food.push(f);
       }
     }
   }

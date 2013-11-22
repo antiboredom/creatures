@@ -43,13 +43,15 @@ if (typeof io != "undefined") {
     //total frames between now and next check = 1000/frameRate
     //frames needed = total + diff *-1
     //1000/x = frames, frames*x = 1000, x = 1000/frames
-    //var diff = data.totalMoments - currentFrame;
-    //if (Math.abs(diff) > 10) {
-    //  var framesNeeded = 100/frameRate + diff * -1;
-    //  setFrameRate(1000/framesNeeded);
-    //  console.log("dif: " + diff);
-    //  console.log(frameRate);
-    //}
+   // var diff = currentFrame - data.totalMoments;
+   // if (Math.abs(diff) > 1) {
+   //   var framesNeeded = 1000/frameRate + diff;
+   //   setFrameRate(1000/framesNeeded);
+   //   console.log("dif: " + diff);
+   //   console.log(frameRate);
+   //   } else {
+   //   setFrameRate(30);
+   //   }
   });
 }
 </script>

@@ -27,7 +27,7 @@ sim.init(function() {
 
     //setInterval(function() {
       //socket.emit('timecheck', { totalMoments: totalMoments });
-    //}, 100)
+    //}, 1000)
   });
 
 

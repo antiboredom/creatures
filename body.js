@@ -8,6 +8,55 @@ if (typeof isServer != 'undefined' && isServer == true) {
   dist = p5.dist;
 }
 
+//Ages
+var INFANT =      800;
+var TODDLER =     1600;
+var CHILD =       2400;
+var ADOLESCENT =  3200;
+var YOUNGADULT =  4000;
+var ADULT =       6000;
+var MIDDLEAGE =   7600;
+var SENIOR =      8800;
+var ALMOSTDEAD =  9200;
+var DIEING =      9400;
+
+//Emotions
+var NEUTRAL =   0;
+var HAPPY =   1;
+var UPSET =   2;
+var CONTEMPLATIVE =   3;
+var ANGRY =   4;
+var CONTENT =   5;
+var HOSTILE =   6;
+
+var emotions = ["neutral", "happy", "upset", "contemplative", "angry", "content", "hostile"];
+
+var health = ["healthy", "sore", "ailing", "wounded", "badly hurt"];
+
+//HAPPY
+//EXCITED
+//TENDER
+//SCARED
+//ANGRY
+//SAD
+
+//EMOTION = {sad: ["down", "mopey", "grieved", "dejected", "depressed", "heartbroken"], 
+  //angry: "annoyed", "resentful", "upset", "mad", "angry", "furious",
+  //scared: "tense", "nervous", "anxious", "frightened", "panicked", "terrified"
+  //tender: "kind", "touched", "sympathetic", "warm-hearted", "tender", "loving", "intimate"
+  //excited: "antsy", "aroused", "energetic", "ecstatic", "manic"
+  //happy: "pleased", "optimistic", "glad", "content", "fulfilled", "very happy"
+
+//"vigilant", "anxious", "interested"
+//"ecstatic", "joyful", "serene"
+//"admiring", "trustful", "accepting"
+//"terrorized", "afraid", "apprehensive"
+//"amazed", "surprised", "distracted"
+//"grieved", "sad", "pensive"
+//"malicious", "hostile", "disgusted", "bored"
+//"enraged", "angry", "annoyed"
+
+
 function Body(x, y, name) {
   this.r = 10;
   this.location = new PVector(x, y);
@@ -29,6 +78,8 @@ function Body(x, y, name) {
   this.bornAt = millis();
   this.alive = true;
   this.pregnant = false;
+  this.emotion = Math.floor(random(0, 7));
+  this.health = 0;
 }
 
 
@@ -39,7 +90,7 @@ Body.prototype.update = function() {
   }
 
   if (this.hunger > 3 && this.r > 9) {
-    this.r -= .01;
+    //this.r -= .005;
   }
 
   this.velocity.add(this.acceleration);
@@ -49,13 +100,13 @@ Body.prototype.update = function() {
   this.acceleration.mult(0);
 }
 
-Body.prototype.runOnServer = function(bodies, map) {
-  this.applyBehaviors(bodies, map);
+Body.prototype.runOnServer = function(bodies, m) {
+  this.applyBehaviors(bodies, m);
   this.update();
 }
 
-Body.prototype.run = function(bodies, map) {
-  this.applyBehaviors(bodies, map);
+Body.prototype.run = function(bodies, m) {
+  this.applyBehaviors(bodies, m);
   this.update();
   this.display();
 }
@@ -65,7 +116,7 @@ Body.prototype.applyForce = function(force) {
   this.acceleration.add(force);
 }
 
-Body.prototype.applyBehaviors = function(bodies, map) {
+Body.prototype.applyBehaviors = function(bodies, m) {
   this.mateWeight = 2.5 - this.hunger;
   if (this.mateWeight < 0) { 
     this.mateWeight = 0;
@@ -75,7 +126,7 @@ Body.prototype.applyBehaviors = function(bodies, map) {
   mateDance.mult(this.mateWeight);
   this.applyForce(mateDance);
 
-  this.mate(bodies);
+  this.personalContact(bodies);
 
   this.hunger += .005;
 
@@ -87,7 +138,12 @@ Body.prototype.applyBehaviors = function(bodies, map) {
     this.hungry = true;
   }
 
-  this.obstacleVector = this.obstacleSeparation(map);
+  //this.obstacleVector = this.obstacles(m);
+  //this.obstacleVector.mult(4);
+  //this.obstacleVector.mult(this.hungry ? this.hunger : 3);
+  //this.applyForce(this.obstacleVector);
+
+  this.obstacleVector = this.obstacleSeparation(m);
   this.obstacleVector.mult(this.hungry ? this.hunger : 3);
   this.applyForce(this.obstacleVector);
 
@@ -98,6 +154,17 @@ Body.prototype.applyBehaviors = function(bodies, map) {
   var sep = this.separate(bodies);
   sep.mult(2.5 - this.mateWeight);
   this.applyForce(sep);
+
+  if (this.emotion == HOSTILE) {
+    var attackVector = this.bloodLust(bodies);
+    attackVector.mult(3);
+    this.applyForce(attackVector);
+  }
+
+  var food = m.blocked(this.location.x, this.location.y);
+  if (food && food.location.dist(this.location) < food.r + this.r) {
+    this.eat(food);
+  }
 }
 
 Body.prototype.display = function() {
@@ -108,7 +175,7 @@ Body.prototype.display = function() {
   if (this == toFollow) {
     noStroke();
     fill(0, 150, 255, 80);
-    if (this.hunger > 5) { 
+    if (this.emotion == HOSTILE) { 
       fill(255, 0, 0, 100);
     }
     ellipse(0, 0, this.r+6, this.r+6);
@@ -130,7 +197,8 @@ Body.prototype.display = function() {
   ellipse(2, -3, 4, 4);
   ellipse(2, 3, 4, 4);
 
-  if (this.hunger > 5) {
+  //if (this.hunger > 5) {
+  if (this.emotion == HOSTILE) {
     fill(200, 0, 0, 100);
     noStroke();
     ellipse(0, 0, this.r+3, this.r+3);
@@ -142,7 +210,7 @@ Body.prototype.display = function() {
   if (this == toFollow || showAllLabels) {
     fill(50);
     textSize(10);
-    text(this.name, this.location.x + this.r, this.location.y);
+    text(this.name + " " + emotions[this.emotion], this.location.x + this.r, this.location.y);
     textSize(9);
     text(this.hungerToS() + " " + this.ageToS(), this.location.x + this.r, this.location.y + 12);
   }
@@ -152,7 +220,7 @@ Body.prototype.display = function() {
 Body.prototype.eat = function(food) {
   this.r += .005;
   food.eat();
-  this.hunger -= .01;
+  this.hunger -= .02;
 }
 
 
@@ -184,35 +252,35 @@ Body.prototype.hungerToS = function() {
 
 Body.prototype.ageToS = function() {
   var toReturn = "new born";
-  if (this.age > 0 && this.age < 400) {
+  if (this.age > 0 && this.age < INFANT) {
     return "infant";
   }
 
-  else if (this.age > 400 && this.age < 800) {
+  else if (this.age > INFANT && this.age < TODDLER) {
     return "toddler";
   }
-  else if (this.age > 800 && this.age < 1200) {
+  else if (this.age > TODDLER && this.age < CHILD) {
     return "child";
   }
-  else if (this.age > 1200 && this.age < 1600) {
+  else if (this.age > CHILD && this.age < ADOLESCENT) {
     return "adolescent";
   }
-  else if (this.age > 1600 && this.age < 2000) {
+  else if (this.age > ADOLESCENT && this.age < YOUNGADULT) {
     return "young adult";
   }
-  else if (this.age > 2000 && this.age < 3000) {
+  else if (this.age > YOUNGADULT && this.age < ADULT) {
     return "adult";
   }
-  else if (this.age > 3000 && this.age < 3800) {
+  else if (this.age > ADULT && this.age < MIDDLEAGE) {
     return "middle-aged";
   }
-  else if (this.age > 3800 && this.age < 4400) {
+  else if (this.age > MIDDLEAGE && this.age < SENIOR) {
     return "senior citizen";
   }
-  else if (this.age > 4400 && this.age < 4600) {
+  else if (this.age > SENIOR && this.age < ALMOSTDEAD) {
     return "rapidly degenerating";
   }
-  else if (this.age > 4600) {
+  else if (this.age > ALMOSTDEAD) {
     return "ready to die";
   }
 
@@ -234,13 +302,19 @@ Body.prototype.go = function(dir) {
   }
 }
 
-Body.prototype.mate = function(bodies) {
+Body.prototype.personalContact = function(bodies) {
   for (var i = 0; i < bodies.length; i++) {
     var b = bodies[i];
-    if (millis() - this.lastPregnant > 1000 && millis() - this.bornAt > 10000 && b != this && this.location.dist(b.location) < 10 && random(1) > .5) {
-      console.log(this.name + " and " + b.name + " have mated!");
-      this.pregnant = true;
-      this.lastPregnant = millis();
+    if (this != b && this.location.dist(b.location) < 10 ) {
+      if (this.emotion == HOSTILE) {
+        b.alive = false;
+        console.log(this.name + " has viciously attacked and murdered " + b.name);
+      }
+      if (this.emotion != HOSTILE && b.emotion != HOSTILE && millis() - this.lastPregnant > 1000 && this.age > ADOLESCENT && this.age < MIDDLEAGE && random(1) > .5) {
+        console.log(this.name + " and " + b.name + " have mated!");
+        this.pregnant = true;
+        this.lastPregnant = millis();
+      }
     }
   }
 }
@@ -266,6 +340,20 @@ Body.prototype.seekFarthest = function(bodies) {
     }
   }
   return this.seek(target.location);
+}
+
+Body.prototype.bloodLust = function(bodies) {
+  var target = new PVector();
+  var closest = 0;
+  for (var i = 0; i < bodies.length; i++) {
+    var b = bodies[i];
+    var dist = this.location.dist(b.location)
+    if (b != this && dist < 100) {
+      target = b.location;
+      closest = dist;
+    }
+  }
+  return this.seek(target);
 }
 
 Body.prototype.seekFatest = function(bodies) {
@@ -305,11 +393,12 @@ Body.prototype.wander = function() {
   return this.seek(target);
 }
 
-Body.prototype.obstacles = function() {
+Body.prototype.obstacles = function(m) {
   var steerV = new PVector();
-  var target = PVector.add(this.location, this.velocity);//velocity.get();
+  var target = PVector.add(this.location, this.velocity.mult(10));//velocity.get();
+  var food = m.blocked(target.x, target.y);
 
-  if (m.blocked(target.x, target.y)) {
+  if (food && this.hungry) {
     var desired = PVector.sub(this.location, target);
     steerV = PVector.sub(desired, this.velocity);
     steerV.limit(this.maxforce);
@@ -328,14 +417,15 @@ Body.prototype.obstacleSeparation = function(m) {
     for (var y = parseInt(this.location.y - sep/2); y < this.location.y + sep/2; y ++) {
       var food = m.blocked(x, y);
       if (dist(this.location.x, this.location.y, x, y) < sep/2 && food) {
-        var d = PVector.dist(this.location, new PVector(x, y));
+        var tempV = new PVector(x,y);
+        var d = PVector.dist(this.location, tempV);
         var diff;
         if (this.hungry) {
-          diff = PVector.sub(new PVector(x, y), this.location);
-          this.eat(food);
+          diff = PVector.sub(tempV, this.location);
+          //this.eat(food);
         }
         else {
-          diff = PVector.sub(this.location, new PVector(x, y));
+          diff = PVector.sub(this.location, tempV);
         }
         diff.normalize();
         diff.div(d); // Weight by distance
