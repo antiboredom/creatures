@@ -5,6 +5,7 @@ if (typeof isServer != 'undefined' && isServer == true) {
   cos = p5.cos;
   sin = p5.sin;
   println = p5.println;
+  dist = p5.dist;
 }
 
 function Body(x, y, name) {
@@ -34,7 +35,11 @@ function Body(x, y, name) {
 Body.prototype.update = function() {
   this.age ++;
   if ((this.age > 4800 || this.hunger > 10) && p5.random(1) > .5) { 
-    //this.alive = false;
+    this.alive = false;
+  }
+
+  if (this.hunger > 3 && this.r > 9) {
+    this.r -= .01;
   }
 
   this.velocity.add(this.acceleration);
@@ -44,14 +49,14 @@ Body.prototype.update = function() {
   this.acceleration.mult(0);
 }
 
-Body.prototype.runOnServer = function(bodies) {
-  this.applyBehaviors(bodies);
+Body.prototype.runOnServer = function(bodies, map) {
+  this.applyBehaviors(bodies, map);
   this.update();
 }
 
-Body.prototype.run = function(bodies) {
-  //this.applyBehaviors(bodies);
-  //this.update();
+Body.prototype.run = function(bodies, map) {
+  this.applyBehaviors(bodies, map);
+  this.update();
   this.display();
 }
 
@@ -60,7 +65,7 @@ Body.prototype.applyForce = function(force) {
   this.acceleration.add(force);
 }
 
-Body.prototype.applyBehaviors = function(bodies) {
+Body.prototype.applyBehaviors = function(bodies, map) {
   this.mateWeight = 2.5 - this.hunger;
   if (this.mateWeight < 0) { 
     this.mateWeight = 0;
@@ -82,9 +87,9 @@ Body.prototype.applyBehaviors = function(bodies) {
     this.hungry = true;
   }
 
-  //this.obstacleVector = this.obstacleSeparation();
-  //this.obstacleVector.mult(this.hungry ? this.hunger : 3);
-  //this.applyForce(this.obstacleVector);
+  this.obstacleVector = this.obstacleSeparation(map);
+  this.obstacleVector.mult(this.hungry ? this.hunger : 3);
+  this.applyForce(this.obstacleVector);
 
   this.wanderVector = this.wander();
   this.wanderVector.mult(this.wanderWeight);
@@ -100,6 +105,14 @@ Body.prototype.display = function() {
   translate(this.location.x, this.location.y);
   rotate(this.velocity.heading());
 
+  if (this == toFollow) {
+    noStroke();
+    fill(0, 150, 255, 80);
+    if (this.hunger > 5) { 
+      fill(255, 0, 0, 100);
+    }
+    ellipse(0, 0, this.r+6, this.r+6);
+  }
   //body
   noStroke();
   fill(100);
@@ -123,14 +136,6 @@ Body.prototype.display = function() {
     ellipse(0, 0, this.r+3, this.r+3);
   }
 
-  if (this == toFollow) {
-    noStroke();
-    fill(0, 150, 255, 100);
-    if (this.hunger > 5) { 
-      fill(255, 0, 0, 100);
-    }
-    ellipse(0, 0, this.r+6, this.r+6);
-  }
 
   popMatrix();
 
@@ -144,10 +149,10 @@ Body.prototype.display = function() {
 }
 
 
-Body.prototype.eat = function(x, y) {
-  //this.r += .005;
-  //m.clearPixel(x, y);
-  //this.hunger -= .01;
+Body.prototype.eat = function(food) {
+  this.r += .005;
+  food.eat();
+  this.hunger -= .01;
 }
 
 
@@ -312,7 +317,7 @@ Body.prototype.obstacles = function() {
   return steerV;
 }
 
-Body.prototype.obstacleSeparation = function() {
+Body.prototype.obstacleSeparation = function(m) {
   var steerV = new PVector();
   var desired = new PVector();
   var sep = this.r;
@@ -321,12 +326,13 @@ Body.prototype.obstacleSeparation = function() {
 
   for (var x = parseInt(this.location.x - sep/2); x < this.location.x + sep/2; x ++) {
     for (var y = parseInt(this.location.y - sep/2); y < this.location.y + sep/2; y ++) {
-      if (dist(this.location.x, this.location.y, x, y) < sep/2 && m.blocked(x, y)) {
+      var food = m.blocked(x, y);
+      if (dist(this.location.x, this.location.y, x, y) < sep/2 && food) {
         var d = PVector.dist(this.location, new PVector(x, y));
         var diff;
         if (this.hungry) {
           diff = PVector.sub(new PVector(x, y), this.location);
-          this.eat(x, y);
+          this.eat(food);
         }
         else {
           diff = PVector.sub(this.location, new PVector(x, y));

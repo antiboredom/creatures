@@ -6,12 +6,17 @@ var sc = 1.5;
 var follow = false, flocking = false, looping = true, showAllLabels = false;
 var follower = 0;
 var toFollow;
+var lastDrawn = 0;
+var timeNow = 0;
+var canv;
 
 if (typeof isServer != 'undefined' && isServer == true){
   //window = {};
   screen = {};
   p5 = require('./p5/dist/p5.js');
-  Body = require(__dirname + '/body.js');
+  Body = require('./body.js');
+  Food = require('./food.js');
+  Map = require('./map.js');
   width = 1280;
   height = 720;
   //readNames();
@@ -19,6 +24,7 @@ if (typeof isServer != 'undefined' && isServer == true){
   isServer = false;
 }
 
+var m = new Map(width, height, true);
 var isClient = !isServer;
 
 function init(callback) {
@@ -29,37 +35,16 @@ function init(callback) {
     }
     names = data.split("\n");
     callback();
-    //serverSetup();
-    //serverUpdate();
   });
 }
 
 function serverUpdate() {
-  //var frames = [];
-
-  var frame = {updates: [], births: [], deaths: []};
+  m.update();
   for (var i = 0; i < bodies.length; i++) {
-    bodies[i].runOnServer(bodies);
-    frame.updates.push(JSON.parse(JSON.stringify(bodies[i])));
-    var baby = checkPregnancy(bodies[i]);
-    if (typeof baby == "object") {
-      frame.births.push(baby);
-    }
-    var corpse = checkMortality(bodies[i], i)
-    if (typeof corpse == "number") {
-      frame.deaths.push(i);
-    }
+    bodies[i].runOnServer(bodies, m);
+    checkPregnancy(bodies[i]);
+    checkMortality(bodies[i], i)
   }
-  return frame;
-
-  //setInterval(function(){
-  //for (var i = bodies.length - 1; i >= 0; i--) {
-  //var b = bodies[i];
-  //b.runOnServer(bodies);
-  //checkPregnancy(b);
-  //checkMortality(b, i)
-  //}
-  //}, 1000/30);
 }
 
 function preload() {
@@ -77,14 +62,23 @@ function serverSetup() {
 }
 
 function setup(){
-  createGraphics(1280, 720);
+  canv = createGraphics(1280, 720);
+  setFrameRate(30);
+  if (typeof io == "undefined") {
+    m = new Map(width, height, true);
+    for (var i = 0; i < 30; i ++) {
+      var b = new Body(random(width), random(height), names[parseInt(p5.random(0, names.length-1))]);
+      b.r = random(10, 20);
+      b.age = random(0, 1000);
+      bodies.push(b);
+    }
+  }
 }
 
 
 function draw() {
-  cleanupClientFrames();
-  currentFrame ++;
-  if (follower > bodies.length - 1) { 
+  //console.log(currentFrame);
+  if (follower > bodies.length - 1) {
     follower = 0;
   }
   toFollow = bodies[follower];
@@ -95,49 +89,28 @@ function draw() {
   }
 
   background(250);
+  m.run();
 
   for (var i = 0; i < bodies.length; i ++) {
-    bodies[i].display();
+    if (dist(mouseX, mouseY, bodies[i].location.x, bodies[i].location.y) < bodies[i].r * 2) {
+      follower = i;
+      pushMatrix();
+      translate(-bodies[i].location.x, -bodies[i].location.y);
+      scale(2);
+      bodies[i].run(bodies, m);
+      popMatrix();
+    } else {
+      bodies[i].run(bodies, m);
+    }
+    checkPregnancy(bodies[i]);
+    checkMortality(bodies[i], i)
   }
+  currentFrame ++;
+  timeNow = millis();
+  text((timeNow - lastDrawn), 10, 10);
+  text(mouseX + "," + mouseY, 40, 10);
+  lastDrawn = timeNow;
 
-  //socket.emit('fetch', {bufferCount: clientFrames.length, currentMoment: currentFrame});
-
-  var frame = clientFrames[frameIndex];
-  if (typeof frame == 'undefined') {
-    return false;
-  }
-
-  var updates = frame.updates;
-  //console.log(updates[0].location.x);
-  for (var i = 0; i < updates.length; i++) {
-    var b = updates[i];
-    updateAttributes(bodies[i].location, b.location);
-    updateAttributes(bodies[i].velocity, b.velocity);
-    updateAttributes(bodies[i].acceleration, b.acceleration);
-    bodies[i].hunger = b.hunger;
-    bodies[i].alive = b.alive;
-    bodies[i].pregnant = b.pregnant;
-  }
-
-  var deaths = frame.deaths;
-  for (var i = 0; i < deaths.length; i++) {
-    bodies.splice(deaths[i], 1);
-  }
-
-  var births = frame.births;
-  for (var i = 0; i < births.length; i++) {
-    var b = new Body(births[i].x, births[i].y, births[i].name);
-    bodies.push(b);
-  }
-
-  //frameIndex ++;
-  clientFrames.shift();
-  //if (clientFrames.length < 90 && syncing === false){
-    //syncing = true;
-  //}
-  //if (bodies.length > 50) {
-  //bodies.splice(50, 1);
-  //}
 }
 
 function checkPregnancy(b) {
@@ -156,6 +129,7 @@ function checkMortality(b, i) {
   if (!b.alive) {
     println(b.name + " has died of " + (b.age > 4800 ? "old age" : "hunger. RIP."));
     bodies.splice(i, 1);
+    m.plant(b.location);
     return i;
   } else {
     return false;
@@ -229,7 +203,7 @@ function keyPressed() {
 
 
 function mousePressed() {
-  //m.plant(mouseX, mouseY);
+  //m.plantFood();
 }
 
 function updateAttributes(obj, attr) {
@@ -251,5 +225,6 @@ if (typeof isServer != 'undefined' && isServer == true) {
   exports.checkPregnancy = checkPregnancy;
   exports.serverUpdate = serverUpdate;
   exports.init = init;
+  exports.m = m;
 }
 

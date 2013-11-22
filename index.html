@@ -1,70 +1,62 @@
 <html>
 <head>
-  <script type="text/javascript" charset="utf-8">
-    var p5 = window;
-    var frameIndex = 0;
-    var clientFrames = [];
-    var startedAt = 0;
-    var syncedUntil = 0;
-    var syncing = true;
-    var currentFrame = 0;
-  </script>
-	<script language="javascript" type="text/javascript" src="p5/dist/p5.js"></script>
-	<script language="javascript" type="text/javascript" src="body.js"></script>
-	<script language="javascript" type="text/javascript" src="map.js"></script>
-	<script language="javascript" type="text/javascript" src="simulation.js"></script>
+<script type="text/javascript" charset="utf-8">
+var p5 = window;
+var startedAt = 0;
+var currentFrame = 0;
+</script>
+<script src="http://qua.local:8000/socket.io/socket.io.js"></script>
+<script language="javascript" type="text/javascript" src="p5/dist/p5.js"></script>
+<script language="javascript" type="text/javascript" src="body.js"></script>
+<script language="javascript" type="text/javascript" src="map.js"></script>
+<script language="javascript" type="text/javascript" src="food.js"></script>
+<script language="javascript" type="text/javascript" src="simulation.js"></script>
 
-  <script src="http://localhost:8000/socket.io/socket.io.js"></script>
-  <script>
-    var socket = io.connect('http://localhost:8000');
-    //var socket = io.connect('http://sim.jit.su');
-    socket.on('setup', function(data) {
-      for (var i = 0; i < data.frames[0].updates.length; i ++) {
-        var b = data.frames[0].updates[i];
-        var b2 = new Body(b.location.x, b.location.y, b.name);
-        updateAttributes(b2, b);
-        bodies.push(b2);
-      }
-      console.log(data);
-      clientFrames = data.frames;
-      startedAt = data.startedAt;
-      currentFrame = startedAt;
-      syncedUntil = data.syncedUntil;
-      frameIndex = 0;
-      syncing = false;
-    });
-
-//    setInterval(function(){
-//      if (clientFrames.length < 90) {
-//        socket.emit('fetch', {currentFrame: currentFrame, startAt: currentFrame + clientFrames.length});
-//      }
-//    }, 500);
-
-    function cleanupClientFrames(){
-      for (var i = 0; i < clientFrames.length; i ++) {
-        if (typeof clientFrames[i] == "undefined") {
-          clientFrames.splice(i, 1);
-        }
-      }
+<script>
+if (typeof io != "undefined") {
+  var socket = io.connect('http://qua.local:8000');
+  socket.on('setup', function(data) {
+    map = data.map;
+    m = new Map(map.w, map.h, false);
+    for (var i = 0; i < map.food.length; i ++) {
+      var tempf = map.food[i];
+      var f = new Food(tempf.location.x, tempf.location.y, tempf.r);
+      updateAttributes(f, tempf);
+      m.food.push(f);
     }
+    bodies = [];
+    currentFrame = data.startedAt;
+    for (var i = 0; i < data.bodies.length; i ++) {
+      var b = data.bodies[i];
+      var b2 = new Body(b.location.x, b.location.y, b.name);
+      updateAttributes(b2, b);
+      bodies.push(b2);
+    }
+    randomseed(data.seed);
+  });
 
-    socket.on('history', function (data) {
-      if (typeof data.currentFrame != "undefined") {
-        //currentFrame = data.currentFrame;
-      }
-      if (typeof data.frames != "undefined") {
-        syncedUntil = data.syncedUntil;
-        for (var i = 0; i < data.frames.length; i++) {
-          clientFrames[data.currentFrame - currentFrame + i] = data.frames[i];
-        }
-      }
-    });
+  setInterval(function() {
+    socket.emit('ping', {clientMoments: currentFrame});
+  }, 5000);
 
-  </script>
-  <style type="text/css" media="all">
-    body { background: #333; }
-    canvas {left: 50% !important; margin-left: -640px; top: 50% !important; margin-top: -360px; }
-  </style>
+  socket.on('timecheck', function(data) {
+    //total frames between now and next check = 1000/frameRate
+    //frames needed = total + diff *-1
+    //1000/x = frames, frames*x = 1000, x = 1000/frames
+    //var diff = data.totalMoments - currentFrame;
+    //if (Math.abs(diff) > 10) {
+    //  var framesNeeded = 100/frameRate + diff * -1;
+    //  setFrameRate(1000/framesNeeded);
+    //  console.log("dif: " + diff);
+    //  console.log(frameRate);
+    //}
+  });
+}
+</script>
+<style type="text/css" media="all">
+body { background: #333; }
+//canvas {left: 50% !important; margin-left: -640px; top: 50% !important; margin-top: -360px; }
+</style>
 </head>
 
 <body>

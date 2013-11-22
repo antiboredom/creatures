@@ -1399,6 +1399,12 @@ if (typeof isServer != 'undefined' && isServer == true) {
 
 }(window));
 ;(function(exports) {
+  exports.seed = Math.random();
+
+  exports.randomseed = function(s) {
+    exports.seed = s;
+  }
+
   exports.random = function(x, y) {
     // might want to use this kind of check instead:
     // if (arguments.length === 0) {
@@ -1411,6 +1417,22 @@ if (typeof isServer != 'undefined' && isServer == true) {
     }
   };
 
+  exports.random = function(x, y) {
+    exports.seed++;
+    var a = Math.sin(exports.seed) * 10000;
+    var r =  a - Math.floor(a);
+    if (typeof x !== 'undefined' && typeof y !== 'undefined') {
+      return (y - x) * r + x;
+    } else if (typeof x !== 'undefined') { 
+      return x * r;
+    } else {
+      return r;
+    }
+  };
+
+  exports.getSeed = function() {
+   return exports.seed; 
+  };
 }(window));
 ;(function(exports) {
 
