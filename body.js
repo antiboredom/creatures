@@ -210,7 +210,7 @@ Body.prototype.display = function() {
   if (this == toFollow || showAllLabels) {
     fill(50);
     textSize(10);
-    text(this.name + " " + emotions[this.emotion], this.location.x + this.r, this.location.y);
+    text(this.name, this.location.x + this.r, this.location.y);
     textSize(9);
     text(this.hungerToS() + " " + this.ageToS(), this.location.x + this.r, this.location.y + 12);
   }
@@ -309,6 +309,7 @@ Body.prototype.personalContact = function(bodies) {
       if (this.emotion == HOSTILE) {
         b.alive = false;
         console.log(this.name + " has viciously attacked and murdered " + b.name);
+        this.hunger --;
       }
       if (this.emotion != HOSTILE && b.emotion != HOSTILE && millis() - this.lastPregnant > 1000 && this.age > ADOLESCENT && this.age < MIDDLEAGE && random(1) > .5) {
         console.log(this.name + " and " + b.name + " have mated!");

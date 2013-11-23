@@ -78,21 +78,22 @@ function setup(){
 
 function draw() {
   //console.log(currentFrame);
+
   if (follower > bodies.length - 1) {
     follower = 0;
   }
   toFollow = bodies[follower];
+  background(250);
 
   if (follow) {
     scale(sc);
     translate((toFollow.location.x - width/(2*sc))*-1, (toFollow.location.y - height/(2*sc))*-1);
   }
 
-  background(250);
   m.run();
 
   for (var i = 0; i < bodies.length; i ++) {
-    if (dist(mouseX, mouseY, bodies[i].location.x, bodies[i].location.y) < bodies[i].r * 2) {
+    if (!follow && dist(mouseX, mouseY, bodies[i].location.x, bodies[i].location.y) < bodies[i].r * 2) {
       follower = i;
       pushMatrix();
       translate(-bodies[i].location.x, -bodies[i].location.y);
