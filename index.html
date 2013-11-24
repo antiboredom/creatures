@@ -11,12 +11,13 @@ var currentFrame = 0;
 <script language="javascript" type="text/javascript" src="map.js"></script>
 <script language="javascript" type="text/javascript" src="food.js"></script>
 <script language="javascript" type="text/javascript" src="simulation.js"></script>
+<script language="javascript" type="text/javascript" src="log.js"></script>
 
 <script>
 if (typeof io != "undefined") {
   var socket = io.connect('http://qua.local:8000');
   socket.on('setup', function(data) {
-    map = data.map;
+    var map = data.map;
     m = new Map(map.w, map.h, false);
     for (var i = 0; i < map.food.length; i ++) {
       var tempf = map.food[i];
@@ -37,7 +38,7 @@ if (typeof io != "undefined") {
 
   setInterval(function() {
     socket.emit('ping', {clientMoments: currentFrame});
-  }, 5000);
+  }, 100);
 
   socket.on('timecheck', function(data) {
     //total frames between now and next check = 1000/frameRate
@@ -62,5 +63,6 @@ body { background: #333; }
 </head>
 
 <body>
+<textarea id="log" style="float:right; margin:0; padding:0; background: #333; color: #fff; border:0; width: 300px; height: 720;"></textarea>
 </body>
 </html>

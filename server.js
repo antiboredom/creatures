@@ -20,7 +20,7 @@ sim.init(function() {
   io.sockets.on('connection', function (socket) {
     reset(socket);
     socket.on('ping', function (data) {
-      if (Math.abs(data.clientMoments - totalMoments) > 10) {
+      if (Math.abs(data.clientMoments - totalMoments) > 5) {
         reset(socket);
       }
     });

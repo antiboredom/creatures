@@ -55,7 +55,7 @@ var health = ["healthy", "sore", "ailing", "wounded", "badly hurt"];
 //"grieved", "sad", "pensive"
 //"malicious", "hostile", "disgusted", "bored"
 //"enraged", "angry", "annoyed"
-
+// remorseful
 
 function Body(x, y, name) {
   this.r = 10;
@@ -68,7 +68,7 @@ function Body(x, y, name) {
   this.age = 0;
   this.obstacleWeight = 1.3;
   this.seekWeight = .1;
-  this.wanderWeight = .1
+  this.wanderWeight = .3;//.1;
   this.mateWeight = 0;
   this.wandertheta = 0;
   this.lastPregnant = 0;
@@ -78,20 +78,32 @@ function Body(x, y, name) {
   this.bornAt = millis();
   this.alive = true;
   this.pregnant = false;
-  this.emotion = Math.floor(random(0, 7));
+  this.emotion = Math.floor(random(0, 30));
   this.health = 0;
 }
 
 
-Body.prototype.update = function() {
+Body.prototype.update = function(bodies, m) {
   this.age ++;
-  if ((this.age > 4800 || this.hunger > 10) && p5.random(1) > .5) { 
+  if ((this.age > 9400 || this.hunger > 10)) { 
     this.alive = false;
+    this.causeOfDeath = this.hunger > 10 ? "hunger" : "old age";
   }
 
   if (this.hunger > 3 && this.r > 9) {
     //this.r -= .005;
   }
+
+  this.personalContact(bodies);
+
+  this.hunger += .005;
+
+  //for (var i = 0; i < m.food.length; i++) {
+    //var food = m.food[i];
+    //if (food.location.dist(this.location) < food.r / 2 + this.r/2 + 2) {
+      //this.eat(food);
+    //}
+  //}
 
   this.velocity.add(this.acceleration);
   this.velocity.limit(this.maxspeed);
@@ -102,12 +114,12 @@ Body.prototype.update = function() {
 
 Body.prototype.runOnServer = function(bodies, m) {
   this.applyBehaviors(bodies, m);
-  this.update();
+  this.update(bodies, m);
 }
 
 Body.prototype.run = function(bodies, m) {
   this.applyBehaviors(bodies, m);
-  this.update();
+  this.update(bodies, m);
   this.display();
 }
 
@@ -117,24 +129,29 @@ Body.prototype.applyForce = function(force) {
 }
 
 Body.prototype.applyBehaviors = function(bodies, m) {
-  this.mateWeight = 2.5 - this.hunger;
-  if (this.mateWeight < 0) { 
-    this.mateWeight = 0;
+  //this.mateWeight = 2.5 - this.hunger;
+  //if (this.mateWeight < 0) { 
+    //this.mateWeight = 0;
+  //}
+  //var mateDance = this.matingDance();
+  if (this.age > CHILD) {
+    var mateDance = this.matingDance();
+    //var mateDance = this.seekFatest(bodies);
+    if (mateDance) {
+      this.mateWeight = p5.map(bodies.length, 0, 40, 3, 0);// - this.hunger/2;
+      if (this.mateWeight < 0) { 
+        this.mateWeight = 0;
+      }
+      mateDance.mult(this.mateWeight);
+      this.applyForce(mateDance);
+    }
   }
-  var mateDance = this.matingDance();
-  //this.mateWeight = 2;
-  mateDance.mult(this.mateWeight);
-  this.applyForce(mateDance);
-
-  this.personalContact(bodies);
-
-  this.hunger += .005;
 
   if (this.hunger < 1) {
-    this.mateWeight = 1;
+    //this.mateWeight = 1;
     this.hungry = false;
   } else {
-    this.mateWeight = 0;
+    //this.mateWeight = 0;
     this.hungry = true;
   }
 
@@ -143,27 +160,35 @@ Body.prototype.applyBehaviors = function(bodies, m) {
   //this.obstacleVector.mult(this.hungry ? this.hunger : 3);
   //this.applyForce(this.obstacleVector);
 
-  this.obstacleVector = this.obstacleSeparation(m);
-  this.obstacleVector.mult(this.hungry ? this.hunger : 3);
-  this.applyForce(this.obstacleVector);
+  var seekFoodVector = this.seekClosestFood(m);
+  if (seekFoodVector) {
+    seekFoodVector.mult(this.hunger > 2 ? this.hunger : 0);
+    this.applyForce(seekFoodVector);
+  }
+
+  var gatherVector = this.gatherFood(m);
+  gatherVector.mult(this.hungry ? this.hunger : 3);
+  this.applyForce(gatherVector);
+
+  //this.obstacleVector = this.obstacleSeparation(m);
+  //this.obstacleVector.mult(this.hungry ? this.hunger : 3);
+  //this.applyForce(this.obstacleVector);
 
   this.wanderVector = this.wander();
   this.wanderVector.mult(this.wanderWeight);
   this.applyForce(this.wanderVector);
 
   var sep = this.separate(bodies);
-  sep.mult(2.5 - this.mateWeight);
+  var sepWeight = Math.max(2.5 - this.mateWeight, 0);
+  sep.mult(sepWeight);
   this.applyForce(sep);
 
   if (this.emotion == HOSTILE) {
     var attackVector = this.bloodLust(bodies);
-    attackVector.mult(3);
-    this.applyForce(attackVector);
-  }
-
-  var food = m.blocked(this.location.x, this.location.y);
-  if (food && food.location.dist(this.location) < food.r + this.r) {
-    this.eat(food);
+    if (attackVector) {
+      attackVector.mult(2.5);
+      this.applyForce(attackVector);
+    }
   }
 }
 
@@ -218,9 +243,12 @@ Body.prototype.display = function() {
 
 
 Body.prototype.eat = function(food) {
-  this.r += .005;
-  food.eat();
-  this.hunger -= .02;
+  //this.r += .005;
+  this.r += .05;
+  food.eat(this);
+  //this.hunger -= .02;
+  //this.hunger -= .5;
+  this.hunger -= 1;
 }
 
 
@@ -308,11 +336,12 @@ Body.prototype.personalContact = function(bodies) {
     if (this != b && this.location.dist(b.location) < 10 ) {
       if (this.emotion == HOSTILE) {
         b.alive = false;
-        console.log(this.name + " has viciously attacked and murdered " + b.name);
+        b.causeOfDeath = "vermecide";
+        Log(this.name + " has viciously attacked and murdered " + b.name);
         this.hunger --;
       }
       if (this.emotion != HOSTILE && b.emotion != HOSTILE && millis() - this.lastPregnant > 1000 && this.age > ADOLESCENT && this.age < MIDDLEAGE && random(1) > .5) {
-        console.log(this.name + " and " + b.name + " have mated!");
+        Log(this.name + " and " + b.name + " have mated!");
         this.pregnant = true;
         this.lastPregnant = millis();
       }
@@ -344,7 +373,7 @@ Body.prototype.seekFarthest = function(bodies) {
 }
 
 Body.prototype.bloodLust = function(bodies) {
-  var target = new PVector();
+  var target = false;
   var closest = 0;
   for (var i = 0; i < bodies.length; i++) {
     var b = bodies[i];
@@ -354,20 +383,28 @@ Body.prototype.bloodLust = function(bodies) {
       closest = dist;
     }
   }
-  return this.seek(target);
+  if (target) {
+    return this.seek(target);
+  } else {
+    return false;
+  }
 }
 
 Body.prototype.seekFatest = function(bodies) {
-  var target = new PVector();
+  var target = false;//new PVector();
   var largestBody = 0;
   for (var i = 0; i < bodies.length; i++) {
     var b = bodies[i];
-    if (b != this && b.r > largestBody && this.location.dist(b.location) < 100) {
+    if (b.emotion != HOSTILE && b.age > CHILD && b != this && b.r > largestBody && this.location.dist(b.location) < 100) {
       target = b.location;
       largestBody = b.r;
     }
   }
-  return this.seek(target);
+  if (target) {
+    return this.seek(target);
+  } else {
+    return false;
+  }
 }
 
 
@@ -404,6 +441,79 @@ Body.prototype.obstacles = function(m) {
     steerV = PVector.sub(desired, this.velocity);
     steerV.limit(this.maxforce);
   }
+  return steerV;
+}
+
+
+Body.prototype.seekClosestFood = function(m) {
+  var target = false;
+  var sep = 200;
+  var closest = 10000;
+
+  for (var i = 0; i < m.food.length; i++) {
+    var food = m.food[i];
+    var distance = food.location.dist(this.location); 
+    if (distance < sep && distance < closest) {
+      closest = distance;
+      target = food.location; 
+    }
+  }
+
+  if (target) {
+    return this.seek(target);
+  } else { 
+    return false;
+  }
+
+}
+
+Body.prototype.gatherFood = function(m) {
+  var steerV = new PVector();
+  var desired = new PVector();
+  var sep = this.r;
+  var sum = new PVector();
+  var count = 0;
+
+  for (var i = 0; i < m.food.length; i++) {
+    var food = m.food[i];
+    var distance = food.location.dist(this.location); 
+    if (distance < sep) {
+      var diff;
+      if (this.hungry) {
+        diff = PVector.sub(food.location, this.location);
+      }
+      else {
+        diff = PVector.sub(this.location, food.location);
+      }
+      diff.normalize();
+      diff.div(distance); // Weight by distance
+      sum.add(diff);
+      count++;
+    }
+
+    if (this.hungry && distance < food.r / 2 + this.r/2 + 2) {
+      this.eat(food);
+    }
+    //if (distance < food.r / 2 + this.r/2) {
+      //this.velocity = this.velocity.mult(-1);
+    //}
+  }
+
+  if (count > 0) {
+    sum.div(count);
+    // Our desired vector is the average scaled to maximum speed
+    sum.normalize();
+    sum.mult(this.maxspeed);
+    steerV = PVector.sub(sum, this.velocity);
+    steerV.limit(this.maxforce);
+    //obstacleWeight = 3;
+    //wanderWeight = 1;
+  }
+  else {
+    //obstacleWeight = 0.0;
+    //wanderWeight = .1;
+  }
+
   return steerV;
 }
 

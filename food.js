@@ -3,20 +3,21 @@ function Food(x, y, r) {
   this.age = 1000;
   if (typeof r != "undefined") this.r = r;
   else this.r = 1;
-  this.lastEaten = 0;
-  this.growRate = random(.3, 1);
+  this.lastGrown = millis();
+  this.growRate = random(.1, .3);
+  this.eatenBy = false;
   //this.coords = [];
   //this.setCoords();
 }
 
-Food.prototype.update = function() {
-  this.age ++;
-  this.grow();
+Food.prototype.update = function(m) {
+  //this.age ++;
+  this.grow(m);
 };
 
 
-Food.prototype.run = function() {
-  this.update();
+Food.prototype.run = function(m) {
+  this.update(m);
   this.display();
 };
 
@@ -50,23 +51,51 @@ Food.prototype.display = function() {
   //popMatrix();
 
 
-  stroke(200, 200, 0, 60);
-  fill(0, 200, 0, 100);
-  ellipse(this.location.x, this.location.y, this.r, this.r);
+  //stroke(200, 200, 0, 60);
+  //strokeWeight(1);
+  //fill(0, 200, 0, 100);
   noStroke();
-  strokeWeight(1);
+  fill(151, 231, 140);//0, 200, 0, 100);
+  rectMode(CENTER);
+  ellipse(this.location.x, this.location.y, this.r + 8, this.r + 8);
+
+  //if (this.eatenBy) {
+    //strokeWeight(3);
+    //stroke(0);
+    //line(this.location.x, this.location.y, this.eatenBy.location.x, this.eatenBy.location.y);
+    //this.eatenBy = false;
+  //}
 };
 
-Food.prototype.eat = function() {
-  this.r -= .3;
+Food.prototype.eat = function(body) {
+  this.eatenBy = body;
+  this.r -= .5;
   this.lastEaten = millis();
 };
 
-Food.prototype.grow = function() {
-  if (this.r > 2 && millis() - this.lastEaten > 500) {
-    this.lastEaten = millis();
-    this.r += this.growRate;
+Food.prototype.grow = function(m) {
+  if (m.food.length < 300) {
+  //if (millis() - this.lastGrown > 6000 && random(1) < .001) {
+    //this.lastGrown = millis();
+
+    var dir = Math.floor(random(1, 4));
+    var growX = this.location.x - this.r;
+    var growY = this.location.y;
+    if (dir == 1) {
+      growX = this.location.x;
+      growY = this.location.y - this.r;
+    } else if (dir == 2) {
+      growX = this.location.x + this.r;
+      growY = this.location.y;
+    } else if (dir == 3) {
+      growX = this.location.x;
+      growY = this.location.y + this.r;
+    }
+    m.food.push(new Food(growX, growY, m.foodSize));// + random(1, 5)));
   }
+  //var growX = this.location.x + random(1) > .5 ? this.r : this.r * -1;
+  //var growY = this.location.y + random(1) > .5 ? this.r : this.r * -1;
+  //m.food.push(new Food(growX, growY, this.r));
 };
 
 Food.prototype.seed = function() {

@@ -17,6 +17,7 @@ if (typeof isServer != 'undefined' && isServer == true){
   Body = require('./body.js');
   Food = require('./food.js');
   Map = require('./map.js');
+  Log = function(msg) { console.log(msg) };
   width = 1280;
   height = 720;
   //readNames();
@@ -45,6 +46,7 @@ function serverUpdate() {
     checkPregnancy(bodies[i]);
     checkMortality(bodies[i], i)
   }
+  resetIfNeeded();
 }
 
 function preload() {
@@ -56,7 +58,7 @@ function serverSetup() {
     b = new Body(p5.random(width), p5.random(height), names[parseInt(p5.random(0, names.length-1))]);
     console.log(b.name + " is born");
     b.r = p5.random(10, 20);
-    b.age = parseInt(p5.random(0, 1000));
+    b.age = parseInt(p5.random(0, 6000));
     bodies.push(b);
   }
 }
@@ -68,8 +70,9 @@ function setup(){
     m = new Map(width, height, true);
     for (var i = 0; i < 30; i ++) {
       var b = new Body(random(width), random(height), names[parseInt(p5.random(0, names.length-1))]);
+      Log(b.name + " is born");
       b.r = random(10, 20);
-      b.age = random(0, 1000);
+      b.age = random(0, 6000);
       bodies.push(b);
     }
   }
@@ -81,11 +84,12 @@ function draw() {
 
   if (follower > bodies.length - 1) {
     follower = 0;
+    toFollow = bodies[follower];
   }
-  toFollow = bodies[follower];
+
   background(250);
 
-  if (follow) {
+  if (follow && typeof toFollow != "undefined") {
     scale(sc);
     translate((toFollow.location.x - width/(2*sc))*-1, (toFollow.location.y - height/(2*sc))*-1);
   }
@@ -95,6 +99,7 @@ function draw() {
   for (var i = 0; i < bodies.length; i ++) {
     if (!follow && dist(mouseX, mouseY, bodies[i].location.x, bodies[i].location.y) < bodies[i].r * 2) {
       follower = i;
+      toFollow = bodies[follower];
       pushMatrix();
       translate(-bodies[i].location.x, -bodies[i].location.y);
       scale(2);
@@ -108,16 +113,27 @@ function draw() {
   }
   currentFrame ++;
   timeNow = millis();
-  text((timeNow - lastDrawn), 10, 10);
-  text(mouseX + "," + mouseY, 40, 10);
+  fill(0);
+  text("fps: " + (timeNow - lastDrawn + "  time: " + Math.floor(timeNow/1000) + "  total verme: " + bodies.length), 10, 10);
   lastDrawn = timeNow;
 
+  resetIfNeeded();
+}
+
+function resetIfNeeded() {
+  if (bodies.length == 0) {
+    if (isServer) {
+      serverSetup();
+    } else {
+      setup();
+    }
+  }
 }
 
 function checkPregnancy(b) {
   if (b.pregnant) {
     var baby = new Body(b.location.x, b.location.y, names[parseInt(p5.random(0, names.length-1))]);
-    println(baby.name + " is born");
+    Log(baby.name + " is born");
     bodies.push(baby);
     b.pregnant = false;
     return baby;
@@ -128,7 +144,7 @@ function checkPregnancy(b) {
 
 function checkMortality(b, i) {
   if (!b.alive) {
-    println(b.name + " has died of " + (b.age > 4800 ? "old age" : "hunger. RIP."));
+    Log(b.name + " has died of " + b.causeOfDeath + ". R.I.P.");
     bodies.splice(i, 1);
     m.plant(b.location);
     return i;
@@ -154,15 +170,19 @@ function keyReleased() {
   }
   if (keyCode == 76) {
     follower ++;
+    toFollow = bodies[follower];
   }
   if (keyCode == 75) {
     follower --;
+    toFollow = bodies[follower];
   }
   if (follower >= bodies.length) { 
     follower = 0;
+    toFollow = bodies[follower];
   }
   if (follower < 0) { 
     follower = bodies.length -1;
+    toFollow = bodies[follower];
   }
 
   if (keyCode == 78) {
@@ -204,6 +224,7 @@ function keyPressed() {
 
 
 function mousePressed() {
+  follow = !follow;
   //m.plantFood();
 }
 
