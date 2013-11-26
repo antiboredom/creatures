@@ -29,6 +29,7 @@ sim.init(function() {
     socket.on('changeClass', function(data) {
       if (sim.bodies[data.i] && sim.bodies[data.i].name == data.b.name) {
         sim.bodies[data.i].type = data.b.type;
+        socket.broadcast.emit('changeClass', { i: data.i, b: data.b});
       }
     });
 

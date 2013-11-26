@@ -42,6 +42,10 @@ var WORKER = 2;
 
 var roles = ["owner", "enforcer", "worker"];
 
+var NERVOUS = 1;
+
+var fear = ["nervous", "anxious", "frightened", "terrified"];
+
 //HAPPY
 //EXCITED
 //TENDER
@@ -98,6 +102,7 @@ function Body(x, y, name) {
   this.matedWith = false;
   this.carrying = false;
   this.gender = random() < .5 ? -1 : 1;
+  this.fear = 0;
 }
 
 

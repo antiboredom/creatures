@@ -52,6 +52,11 @@ if (typeof io != "undefined") {
     socket.emit('ping', {clientMoments: currentFrame});
   }, 10000);
 
+  socket.on('changeClass', function(data) {
+    if (bodies[data.i] && bodies[data.i].name == data.b.name) {
+      bodies[data.i].type = data.b.type;
+    }
+  });
   socket.on('timecheck', function(data) {
     //total frames between now and next check = 1000/frameRate
     //frames needed = total + diff *-1
