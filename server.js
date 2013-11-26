@@ -7,10 +7,10 @@ var sim = require('./simulation.js');
 
 sim.init(function() {
   sim.setup();
-
   setInterval(function(){
     seed = p5.seed;
     sim.serverUpdate();
+    m = sim.m();
     totalMoments ++;
   }, 1000/serverFrameRate);
 
@@ -32,7 +32,7 @@ sim.init(function() {
 
 
   function reset(socket) {
-    socket.emit('setup', { seed: seed, startedAt: totalMoments, map: sim.m, bodies: getBodies()});
+    socket.emit('setup', { seed: seed, startedAt: totalMoments, m: m, bodies: getBodies()});
   }
 
 });
@@ -40,7 +40,7 @@ sim.init(function() {
 
 var getBodies = function() {
   var output = [];
-  for (var i = sim.bodies.length - 1; i >= 0; i--) {
+  for (var i = 0; i < sim.bodies.length; i++) {
     var b = sim.bodies[i];
     output.push(b);
   }

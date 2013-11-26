@@ -1,8 +1,8 @@
 function Map(w, h, withFood) {
   this.w = w;
   this.h = h;
-  this.cellsize = 80;
-  this.foodSize = this.cellsize/7;
+  this.cellsize = 70;
+  this.foodSize = this.cellsize/5;
   this.rows = width/this.cellsize;
   this.cols = width/this.cellsize;
 
@@ -43,7 +43,8 @@ Map.prototype.update = function() {
   for (var i = 0; i < this.food.length; i++) {
     this.food[i].update(this);
     if (this.food[i].eatenBy) {
-    //if (this.food[i].r < 1) {
+      this.food[i].checkPermissions(this.food[i].eatenBy);
+      //if (this.food[i].r < 1) {
       this.food.splice(i, 1);
     }
   }

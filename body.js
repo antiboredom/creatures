@@ -33,6 +33,13 @@ var emotions = ["neutral", "happy", "upset", "contemplative", "angry", "content"
 
 var health = ["healthy", "sore", "ailing", "wounded", "badly hurt"];
 
+var OWNER = 0;
+var ENFORCER = 1;
+var WORKER = 2;
+
+var roles = ["owner", "enforcer", "worker"];
+var roleColors = [color(43, 255, 0), color(255, 0, 0), color(217, 217, 217)];
+
 //HAPPY
 //EXCITED
 //TENDER
@@ -58,9 +65,14 @@ var health = ["healthy", "sore", "ailing", "wounded", "badly hurt"];
 // remorseful
 
 function Body(x, y, name) {
+  var classRoll = random();
+  if (classRoll <= .1) this.type = OWNER;
+  else if (classRoll > .1 && classRoll < .2) this.type = ENFORCER;
+  else this.type = WORKER;
+
   this.r = 10;
   this.location = new PVector(x, y);
-  this.maxspeed = p5.random(1, 2);
+  this.maxspeed = this.type == ENFORCER ? 2 : 1;//p5.random(1, 2);
   this.maxforce = .1;
   this.acceleration = new PVector(0, 0);
   this.velocity = new PVector(0, 0);
@@ -78,8 +90,11 @@ function Body(x, y, name) {
   this.bornAt = millis();
   this.alive = true;
   this.pregnant = false;
-  this.emotion = Math.floor(random(0, 30));
+  this.emotion = 0;//Math.floor(random(0, 30));
   this.health = 0;
+  this.targetedIndividual = false;
+  this.matedWith = false;
+  this.carrying = false;
 }
 
 
@@ -95,7 +110,9 @@ Body.prototype.update = function(bodies, m) {
   }
 
   this.personalContact(bodies);
-
+  if (this.type == WORKER && this.age < CHILD && Math.floor(this.location.x % m.foodSize) == 0 && Math.floor(this.location.y % m.foodSize) == 0) {
+    m.plant(this.location);
+  }
   this.hunger += .005;
 
   //for (var i = 0; i < m.food.length; i++) {
@@ -135,8 +152,11 @@ Body.prototype.applyBehaviors = function(bodies, m) {
   //}
   //var mateDance = this.matingDance();
   if (this.age > CHILD) {
-    var mateDance = this.matingDance();
-    //var mateDance = this.seekFatest(bodies);
+    if (this.type == OWNER) {
+      var mateDance = this.seekFatest(bodies);
+    } else {
+      var mateDance = this.matingDance();
+    }
     if (mateDance) {
       this.mateWeight = p5.map(bodies.length, 0, 40, 3, 0);// - this.hunger/2;
       if (this.mateWeight < 0) { 
@@ -183,11 +203,14 @@ Body.prototype.applyBehaviors = function(bodies, m) {
   sep.mult(sepWeight);
   this.applyForce(sep);
 
-  if (this.emotion == HOSTILE) {
+  if (this.type == ENFORCER) {
     var attackVector = this.bloodLust(bodies);
     if (attackVector) {
+      this.emotion = HOSTILE;
       attackVector.mult(2.5);
       this.applyForce(attackVector);
+    } else {
+      this.emotion = 0;
     }
   }
 }
@@ -206,14 +229,22 @@ Body.prototype.display = function() {
     ellipse(0, 0, this.r+6, this.r+6);
   }
   //body
+  //role color
+  //strokeWeight(1);
   noStroke();
+  fill(roleColors[this.type]);
+  ellipse(0, 0, this.r+3, this.r+3);
+
+  //base
   fill(100);
   ellipse(0, 0, this.r, this.r);
 
   //tail
+  noStroke();
+  //fill(rollColors[this.type]);
   fill(255, 0, 0);
   var vel = this.velocity.mag() * 10;
-  ellipse(-vel, 0, 2, 2);
+  ellipse(-vel, 0, 3, 3);
   stroke(100);
   line(-this.r/2, 0, -vel, 0);
 
@@ -223,6 +254,7 @@ Body.prototype.display = function() {
   ellipse(2, 3, 4, 4);
 
   //if (this.hunger > 5) {
+
   if (this.emotion == HOSTILE) {
     fill(200, 0, 0, 100);
     noStroke();
@@ -235,7 +267,7 @@ Body.prototype.display = function() {
   if (this == toFollow || showAllLabels) {
     fill(50);
     textSize(10);
-    text(this.name, this.location.x + this.r, this.location.y);
+    text(this.name + " the " + this.role(), this.location.x + this.r, this.location.y);
     textSize(9);
     text(this.hungerToS() + " " + this.ageToS(), this.location.x + this.r, this.location.y + 12);
   }
@@ -258,6 +290,10 @@ Body.prototype.steer = function(desired) {
   var steerV = PVector.sub(desired, this.velocity);
   steerV.limit(this.maxforce);
   return steerV;
+}
+
+Body.prototype.role = function() {
+  return roles[this.type];
 }
 
 Body.prototype.hungerToS = function() {
@@ -335,14 +371,19 @@ Body.prototype.personalContact = function(bodies) {
     var b = bodies[i];
     if (this != b && this.location.dist(b.location) < 10 ) {
       if (this.emotion == HOSTILE) {
-        b.alive = false;
-        b.causeOfDeath = "vermecide";
-        Log(this.name + " has viciously attacked and murdered " + b.name);
+        //Log(this.name + " has viciously attacked and murdered " + b.name);
         this.hunger --;
+        b.r --;
+        if (b.r < 1) {
+          b.alive = false;
+          b.causeOfDeath = "vermecide";
+          Log(this.name + " has viciously attacked and murdered " + b.name);
+        }
       }
-      if (this.emotion != HOSTILE && b.emotion != HOSTILE && millis() - this.lastPregnant > 1000 && this.age > ADOLESCENT && this.age < MIDDLEAGE && random(1) > .5) {
+      if (b.type == this.type && this.emotion != HOSTILE && b.emotion != HOSTILE && millis() - this.lastPregnant > 1000 && this.age > ADOLESCENT && this.age < MIDDLEAGE && random(1) > .5) {
         Log(this.name + " and " + b.name + " have mated!");
         this.pregnant = true;
+        this.matedWith = b;
         this.lastPregnant = millis();
       }
     }
@@ -378,7 +419,7 @@ Body.prototype.bloodLust = function(bodies) {
   for (var i = 0; i < bodies.length; i++) {
     var b = bodies[i];
     var dist = this.location.dist(b.location)
-    if (b != this && dist < 100) {
+    if (b != this && b.targetedIndividual && dist < 100) {
       target = b.location;
       closest = dist;
     }
@@ -395,7 +436,7 @@ Body.prototype.seekFatest = function(bodies) {
   var largestBody = 0;
   for (var i = 0; i < bodies.length; i++) {
     var b = bodies[i];
-    if (b.emotion != HOSTILE && b.age > CHILD && b != this && b.r > largestBody && this.location.dist(b.location) < 100) {
+    if (b.emotion != HOSTILE && b.age > CHILD && b.age < SENIOR && b != this && b.r > largestBody && this.location.dist(b.location) < 200 && b.type == this.type) {
       target = b.location;
       largestBody = b.r;
     }
@@ -666,6 +707,17 @@ Body.prototype.cohesion = function(bodies) {
   else {
     return new PVector(0, 0);
   }
+}
+
+function generateLastName(father, mother) {
+  var vowels = "[aeiou]";
+  var fatherLastName = father.name.split(" ")[1];
+  var motherLastName = mother.name.split(" ")[1];
+  var lastname = "";
+  if (typeof fatherLastName != "undefined") { lastname = fatherLastName; }
+  else if (typeof motherLastName != "undefined") { lastname = motherLastName; }
+  else { lastname = father.name.substr(0, father.name.search(vowels) + 1) + mother.name.substr(0, mother.name.search(vowels) + 1); }
+  return lastname.charAt(0).toUpperCase() + lastname.substr(1).toLowerCase();
 }
 
 

@@ -15,11 +15,12 @@ var currentFrame = 0;
 
 <script>
 if (typeof io != "undefined") {
+  noLoop();
   var socket = io.connect('http://qua.local:8000');
   socket.on('setup', function(data) {
-    var map = data.map;
-    m = new Map(map.w, map.h, false);
-    for (var i = 0; i < map.food.length; i ++) {
+    var tempmap = data.m;
+    m = new Map(tempmap.w, tempmap.h, false);
+    for (var i = 0; i < tempmap.food.length; i ++) {
       var tempf = map.food[i];
       var f = new Food(tempf.location.x, tempf.location.y, tempf.r);
       updateAttributes(f, tempf);
@@ -34,6 +35,7 @@ if (typeof io != "undefined") {
       bodies.push(b2);
     }
     randomseed(data.seed);
+    loop();
   });
 
   setInterval(function() {
@@ -57,12 +59,36 @@ if (typeof io != "undefined") {
 }
 </script>
 <style type="text/css" media="all">
-body { background: #333; }
+body {
+  background: #333;
+  padding:0;
+  margin:0;
+}
+canvas {
+  width: 80%;
+}
 //canvas {left: 50% !important; margin-left: -640px; top: 50% !important; margin-top: -360px; }
+#log {
+  float:right; margin:0; padding:0; background: #333; color: #fff; border:0; width: 300px; height: 720;overflow-y:scroll;font:12px sans-serif;line-height:130%;
+  width: 20%;
+}
+#log p {
+  margin:0;
+  padding: 5px; 
+  background-color:#555;
+/*  -moz-transition: all 2s;
+  -webkit-transition: all 2s;
+  -o-transition:width all 2s;
+  transition: all 2s;
+*/}
+
+#log p:nth-child(even) {
+  background-color:#444;
+}
 </style>
 </head>
 
 <body>
-<textarea id="log" style="float:right; margin:0; padding:0; background: #333; color: #fff; border:0; width: 300px; height: 720;"></textarea>
+<div id="log"></div>
 </body>
 </html>

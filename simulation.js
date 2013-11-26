@@ -2,7 +2,7 @@
 */
 var bodies = [];
 var names = [];
-var sc = 1.5;
+var sc = 2;//1.5;
 var follow = false, flocking = false, looping = true, showAllLabels = false;
 var follower = 0;
 var toFollow;
@@ -25,7 +25,7 @@ if (typeof isServer != 'undefined' && isServer == true){
   isServer = false;
 }
 
-var m = new Map(width, height, true);
+var m = {};// = new Map(width, height, true);
 var isClient = !isServer;
 
 function init(callback) {
@@ -54,6 +54,7 @@ function preload() {
 }
 
 function serverSetup() {
+  m = new Map(width, height, true);
   for (var i = 0; i < 30; i ++) {
     b = new Body(p5.random(width), p5.random(height), names[parseInt(p5.random(0, names.length-1))]);
     console.log(b.name + " is born");
@@ -67,14 +68,19 @@ function setup(){
   canv = createGraphics(1280, 720);
   setFrameRate(30);
   if (typeof io == "undefined") {
-    m = new Map(width, height, true);
     for (var i = 0; i < 30; i ++) {
       var b = new Body(random(width), random(height), names[parseInt(p5.random(0, names.length-1))]);
-      Log(b.name + " is born");
+      if (b.type == WORKER || b.type == ENFORCER) {
+        b.location.x = random(width/2, width);
+      } else {
+       b.location.x = random(0, width/4);
+      } 
+      Log(b.name + " the " + b.role() + " is born");
       b.r = random(10, 20);
       b.age = random(0, 6000);
       bodies.push(b);
     }
+    m = new Map(width, height, true);
   }
 }
 
@@ -114,7 +120,7 @@ function draw() {
   currentFrame ++;
   timeNow = millis();
   fill(0);
-  text("fps: " + (timeNow - lastDrawn + "  time: " + Math.floor(timeNow/1000) + "  total verme: " + bodies.length), 10, 10);
+  text("fps: " + (timeNow - lastDrawn + "  time: " + currentFrame + "  total verme: " + bodies.length), 10, 10);
   lastDrawn = timeNow;
 
   resetIfNeeded();
@@ -133,9 +139,12 @@ function resetIfNeeded() {
 function checkPregnancy(b) {
   if (b.pregnant) {
     var baby = new Body(b.location.x, b.location.y, names[parseInt(p5.random(0, names.length-1))]);
-    Log(baby.name + " is born");
+    baby.type = b.type;
+    baby.name = baby.name + " " + generateLastName(b.matedWith, b);
+    Log(baby.name + " the " + baby.role() + " is born");
     bodies.push(baby);
     b.pregnant = false;
+    b.matedWith = false;
     return baby;
   } else {
     return false;
@@ -241,12 +250,15 @@ function updateAttributes(obj, attr) {
 }
 
 if (typeof isServer != 'undefined' && isServer == true) {
+  var getMap = function () {
+    return m;
+  };
   exports.setup = serverSetup;
   exports.bodies = bodies;
   exports.checkMortality = checkMortality;
   exports.checkPregnancy = checkPregnancy;
   exports.serverUpdate = serverUpdate;
   exports.init = init;
-  exports.m = m;
+  exports.m = getMap;
 }
 

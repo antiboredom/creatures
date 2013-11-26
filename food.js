@@ -1,23 +1,28 @@
+var OWNER = 0;
+var ENFORCER = 1;
+var WORKER = 2;
+
 function Food(x, y, r) {
   this.location = new PVector(x, y);
-  this.age = 1000;
+  //this.age = 1000;
   if (typeof r != "undefined") this.r = r;
   else this.r = 1;
-  this.lastGrown = millis();
-  this.growRate = random(.1, .3);
+  //this.lastGrown = millis();
+  //this.growRate = random(.1, .3);
   this.eatenBy = false;
+  this.ownedBy = x < width/2 ? OWNER : WORKER;
   //this.coords = [];
   //this.setCoords();
 }
 
 Food.prototype.update = function(m) {
   //this.age ++;
-  this.grow(m);
+  //this.grow(m);
 };
 
 
 Food.prototype.run = function(m) {
-  this.update(m);
+  //this.update(m);
   this.display();
 };
 
@@ -28,6 +33,16 @@ Food.prototype.setCoords = function() {
     }
   }
 };
+
+Food.prototype.checkPermissions = function(body) {
+  if (body.type == WORKER && this.ownedBy != WORKER) {
+    if (!body.targetedIndividual) {
+      body.targetedIndividual = true;
+      Log(body.name + " has stolen food from Master's land.");
+      Log(body.name + " has been targeted by the Police.");
+    }
+  }
+}
 
 Food.prototype.display = function() {
   //noStroke();
@@ -51,14 +66,13 @@ Food.prototype.display = function() {
   //popMatrix();
 
 
-  //stroke(200, 200, 0, 60);
   //strokeWeight(1);
   //fill(0, 200, 0, 100);
+  //rectMode(CENTER);
   noStroke();
-  fill(151, 231, 140);//0, 200, 0, 100);
-  rectMode(CENTER);
+  fill(151, this.ownedBy == WORKER ? 180 : 231, 140);//0, 200, 0, 100);
   ellipse(this.location.x, this.location.y, this.r + 8, this.r + 8);
-
+  //ellipse(this.location.x, this.location.y, this.r/3, this.r/3);
   //if (this.eatenBy) {
     //strokeWeight(3);
     //stroke(0);
@@ -69,8 +83,8 @@ Food.prototype.display = function() {
 
 Food.prototype.eat = function(body) {
   this.eatenBy = body;
-  this.r -= .5;
-  this.lastEaten = millis();
+  //this.r -= .5;
+  //this.lastEaten = millis();
 };
 
 Food.prototype.grow = function(m) {
