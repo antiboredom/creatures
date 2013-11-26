@@ -6,6 +6,9 @@ if (typeof isServer != 'undefined' && isServer == true) {
   sin = p5.sin;
   println = p5.println;
   dist = p5.dist;
+  color = p5.color;
+} else {
+  var roleColors = [color(43, 255, 0), color(255, 0, 0), color(217, 217, 217)];
 }
 
 //Ages
@@ -38,7 +41,6 @@ var ENFORCER = 1;
 var WORKER = 2;
 
 var roles = ["owner", "enforcer", "worker"];
-var roleColors = [color(43, 255, 0), color(255, 0, 0), color(217, 217, 217)];
 
 //HAPPY
 //EXCITED
@@ -95,6 +97,7 @@ function Body(x, y, name) {
   this.targetedIndividual = false;
   this.matedWith = false;
   this.carrying = false;
+  this.gender = random() < .5 ? -1 : 1;
 }
 
 
@@ -110,10 +113,13 @@ Body.prototype.update = function(bodies, m) {
   }
 
   this.personalContact(bodies);
-  if (this.type == WORKER && this.age < CHILD && Math.floor(this.location.x % m.foodSize) == 0 && Math.floor(this.location.y % m.foodSize) == 0) {
+  //if (this.type == WORKER && this.age < CHILD && Math.floor(this.location.x % m.foodSize) == 0 && Math.floor(this.location.y % m.foodSize) == 0) {
+  //if (this.type == WORKER && this.age < CHILD && m.shouldPlant(this.location)) {
+  if (m.shouldPlant(this.location)) {
     m.plant(this.location);
   }
-  this.hunger += .005;
+
+  this.hunger += .003;
 
   //for (var i = 0; i < m.food.length; i++) {
     //var food = m.food[i];
@@ -151,6 +157,7 @@ Body.prototype.applyBehaviors = function(bodies, m) {
     //this.mateWeight = 0;
   //}
   //var mateDance = this.matingDance();
+  this.mateWeight = 0;
   if (this.age > CHILD) {
     if (this.type == OWNER) {
       var mateDance = this.seekFatest(bodies);
@@ -159,6 +166,7 @@ Body.prototype.applyBehaviors = function(bodies, m) {
     }
     if (mateDance) {
       this.mateWeight = p5.map(bodies.length, 0, 40, 3, 0);// - this.hunger/2;
+      //if (this.type == WORKER) this.mateWeight = 3;
       if (this.mateWeight < 0) { 
         this.mateWeight = 0;
       }
@@ -175,41 +183,49 @@ Body.prototype.applyBehaviors = function(bodies, m) {
     this.hungry = true;
   }
 
-  //this.obstacleVector = this.obstacles(m);
-  //this.obstacleVector.mult(4);
-  //this.obstacleVector.mult(this.hungry ? this.hunger : 3);
-  //this.applyForce(this.obstacleVector);
+  this.farmWeight = 0;
+  var farmWeight = Math.abs(3 - this.hunger) * p5.map(m.food.length, 0, 350, 3, .5);
+  if (this.type == WORKER && farmWeight > 2) {
+    var farmVector = this.seekClosestSeed(m);
+    if (farmVector) {
+      farmVector.mult(farmWeight);
+      this.applyForce(farmVector);
+      this.farmWeight = farmWeight;
+    }
+  }
 
   var seekFoodVector = this.seekClosestFood(m);
+  this.seekFoodWeight = 0;
   if (seekFoodVector) {
-    seekFoodVector.mult(this.hunger > 2 ? this.hunger : 0);
+    this.seekFoodWeight = this.hunger > 2 ? this.hunger : 0;
+    seekFoodVector.mult(this.seekFoodWeight);
     this.applyForce(seekFoodVector);
   }
 
   var gatherVector = this.gatherFood(m);
-  gatherVector.mult(this.hungry ? this.hunger : 3);
+  this.gatherWeight = this.hungry ? this.hunger : 3; 
+  gatherVector.mult(this.gatherWeight);
   this.applyForce(gatherVector);
-
-  //this.obstacleVector = this.obstacleSeparation(m);
-  //this.obstacleVector.mult(this.hungry ? this.hunger : 3);
-  //this.applyForce(this.obstacleVector);
 
   this.wanderVector = this.wander();
   this.wanderVector.mult(this.wanderWeight);
   this.applyForce(this.wanderVector);
 
   var sep = this.separate(bodies);
-  var sepWeight = Math.max(2.5 - this.mateWeight, 0);
-  sep.mult(sepWeight);
+  this.sepWeight = Math.max(2.5 - this.mateWeight, 0);
+  sep.mult(this.sepWeight);
   this.applyForce(sep);
 
+  this.attackWeight = 0;
   if (this.type == ENFORCER) {
     var attackVector = this.bloodLust(bodies);
     if (attackVector) {
       this.emotion = HOSTILE;
-      attackVector.mult(2.5);
+      this.attackWeight = 2.5;
+      attackVector.mult(this.attackWeight);
       this.applyForce(attackVector);
     } else {
+      this.attackWeight = 0;
       this.emotion = 0;
     }
   }
@@ -270,16 +286,14 @@ Body.prototype.display = function() {
     text(this.name + " the " + this.role(), this.location.x + this.r, this.location.y);
     textSize(9);
     text(this.hungerToS() + " " + this.ageToS(), this.location.x + this.r, this.location.y + 12);
+    text("wants to " + this.desireToS(), this.location.x + this.r, this.location.y + 24);
   }
 }
 
 
 Body.prototype.eat = function(food) {
-  //this.r += .005;
   this.r += .05;
   food.eat(this);
-  //this.hunger -= .02;
-  //this.hunger -= .5;
   this.hunger -= 1;
 }
 
@@ -351,6 +365,13 @@ Body.prototype.ageToS = function() {
   return toReturn;
 }
 
+Body.prototype.desireToS = function() {
+  var desireNames = ["mate", "eat", "farm", "attack", "wander"];
+  var desires = [[this.mateWeight, "mate"], [this.seekFoodWeight, "eat"], [this.farmWeight, "farm"], [this.attackWeight, "kill"], [this.wanderWeight, "wander"]].sort(function(a,b) { return b[0] - a[0] }); 
+  return desires[0][1] + " and " + desires[1][1];
+  //return "mate: " + this.mateWeight + " eat " + this.seekFoodWeight +  " farm: " + this.farmWeight + " kill " + this.attackWeight + " wander " + this.wanderWeight
+};
+
 Body.prototype.go = function(dir) {
   if (dir == "up") {
     this.applyForce(new PVector(0, -10));
@@ -370,18 +391,18 @@ Body.prototype.personalContact = function(bodies) {
   for (var i = 0; i < bodies.length; i++) {
     var b = bodies[i];
     if (this != b && this.location.dist(b.location) < 10 ) {
-      if (this.emotion == HOSTILE) {
+      if (this.emotion == HOSTILE && b.type == WORKER) {
         //Log(this.name + " has viciously attacked and murdered " + b.name);
         this.hunger --;
         b.r --;
         if (b.r < 1) {
           b.alive = false;
           b.causeOfDeath = "vermecide";
-          Log(this.name + " has viciously attacked and murdered " + b.name);
+          Log(this.name + " has viciously attacked and murdered " + b.name, "murder");
         }
       }
       if (b.type == this.type && this.emotion != HOSTILE && b.emotion != HOSTILE && millis() - this.lastPregnant > 1000 && this.age > ADOLESCENT && this.age < MIDDLEAGE && random(1) > .5) {
-        Log(this.name + " and " + b.name + " have mated!");
+        Log(this.name + " and " + b.name + " have mated!", "sex");
         this.pregnant = true;
         this.matedWith = b;
         this.lastPregnant = millis();
@@ -393,7 +414,7 @@ Body.prototype.personalContact = function(bodies) {
 
 Body.prototype.matingDance = function() {
   var target = new PVector(width/2 + cos(this.r + this.mateTheta) * (width/4 + this.mateTheta*10), height/2 + sin(this.r + this.mateTheta) * (height/4 + this.mateTheta*10));
-  this.mateTheta += .01;
+  this.mateTheta += .01 * this.gender;
   return this.seek(target);
 }
 
@@ -458,7 +479,9 @@ Body.prototype.wander = function() {
   var wanderR = 30;         // Radius for our "wander circle"
   var wanderD = 80;         // Distance for our "wander circle"
   var change = 0.3;
-  this.wandertheta += random(-change, change); // Randomly change wander theta
+  //this.wandertheta += random(-change, change); // Randomly change wander theta
+  this.wandertheta += noise.perlin2((this.location.x + this.r)/1000, (this.location.y + this.age/1000)/1000) * 10;
+  //this.wandertheta += .2;
 
   // Now we have to calculate the new location to steer towards on the wander circle
   var circleloc = this.velocity.get();    // Start with velocity
@@ -486,6 +509,38 @@ Body.prototype.obstacles = function(m) {
 }
 
 
+Body.prototype.seekClosestSeed = function(m) {
+  var target = false;
+  var sep = 300;
+  var closest = 10000;
+
+  for (var x = 0; x < m.grid.length; x++) {
+    for (var y = 0; y < m.grid[0].length; y++) {
+      if (m.grid[x][y] == true) {
+        var tempV = new PVector(x*m.foodSize, y*m.foodSize);
+        var distance = this.location.dist(tempV);
+        if (distance < sep && distance < closest) {
+          closest = distance;
+          target = tempV;
+        }
+        if (distance < this.r) {
+          var food = new Food(x*m.foodSize, y*m.foodSize, m.foodSize);
+          m.grid[x][y] = food;
+          m.food.push(food);
+          //Log(this.name + " plants a seed.", "farm");
+        }
+      }
+    }
+  }
+
+  if (target) {
+    return this.seek(target);
+  } else { 
+    return false;
+  }
+
+}
+
 Body.prototype.seekClosestFood = function(m) {
   var target = false;
   var sep = 200;
@@ -493,10 +548,12 @@ Body.prototype.seekClosestFood = function(m) {
 
   for (var i = 0; i < m.food.length; i++) {
     var food = m.food[i];
-    var distance = food.location.dist(this.location); 
-    if (distance < sep && distance < closest) {
-      closest = distance;
-      target = food.location; 
+    if (food.ripe()) {
+      var distance = food.location.dist(this.location); 
+      if (distance < sep && distance < closest) {
+        closest = distance;
+        target = food.location; 
+      }
     }
   }
 
@@ -518,7 +575,7 @@ Body.prototype.gatherFood = function(m) {
   for (var i = 0; i < m.food.length; i++) {
     var food = m.food[i];
     var distance = food.location.dist(this.location); 
-    if (distance < sep) {
+    if (distance < sep && food.ripe()) {
       var diff;
       if (this.hungry) {
         diff = PVector.sub(food.location, this.location);
@@ -532,9 +589,10 @@ Body.prototype.gatherFood = function(m) {
       count++;
     }
 
-    if (this.hungry && distance < food.r / 2 + this.r/2 + 2) {
-      this.eat(food);
+    if (food.ripe() && distance < food.r / 2 + this.r/2 + 2) {
+      if (this.hungry) { this.eat(food); }
     }
+
     //if (distance < food.r / 2 + this.r/2) {
       //this.velocity = this.velocity.mult(-1);
     //}
@@ -708,18 +766,6 @@ Body.prototype.cohesion = function(bodies) {
     return new PVector(0, 0);
   }
 }
-
-function generateLastName(father, mother) {
-  var vowels = "[aeiou]";
-  var fatherLastName = father.name.split(" ")[1];
-  var motherLastName = mother.name.split(" ")[1];
-  var lastname = "";
-  if (typeof fatherLastName != "undefined") { lastname = fatherLastName; }
-  else if (typeof motherLastName != "undefined") { lastname = motherLastName; }
-  else { lastname = father.name.substr(0, father.name.search(vowels) + 1) + mother.name.substr(0, mother.name.search(vowels) + 1); }
-  return lastname.charAt(0).toUpperCase() + lastname.substr(1).toLowerCase();
-}
-
 
 Body.prototype.borders = function() {
   if (this.location.x < -this.r) this.location.x = width+this.r;

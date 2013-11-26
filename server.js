@@ -2,6 +2,7 @@ isServer = true;
 totalMoments = 0;
 serverFrameRate = 30;
 var seed = 0;
+perlinSeed = Math.random();
 
 var sim = require('./simulation.js');
 
@@ -25,6 +26,12 @@ sim.init(function() {
       }
     });
 
+    socket.on('changeClass', function(data) {
+      if (sim.bodies[data.i] && sim.bodies[data.i].name == data.b.name) {
+        sim.bodies[data.i].type = data.b.type;
+      }
+    });
+
     //setInterval(function() {
       //socket.emit('timecheck', { totalMoments: totalMoments });
     //}, 1000)
@@ -32,7 +39,7 @@ sim.init(function() {
 
 
   function reset(socket) {
-    socket.emit('setup', { seed: seed, startedAt: totalMoments, m: m, bodies: getBodies()});
+    socket.emit('setup', { seed: seed, perlinSeed: perlinSeed, startedAt: totalMoments, m: m, bodies: getBodies()});
   }
 
 });

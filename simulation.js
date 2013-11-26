@@ -9,14 +9,21 @@ var toFollow;
 var lastDrawn = 0;
 var timeNow = 0;
 var canv;
-
+var renderTimes = [];
+var fps = 0;
+var OWNER = 0;
+var ENFORCER = 1;
+var WORKER = 2;
+var m;// = new Map(width, height, true);
 if (typeof isServer != 'undefined' && isServer == true){
   //window = {};
   screen = {};
   p5 = require('./p5/dist/p5.js');
+  noise = require('./noise.js');
   Body = require('./body.js');
   Food = require('./food.js');
   Map = require('./map.js');
+  noise.seed(perlinSeed);
   Log = function(msg) { console.log(msg) };
   width = 1280;
   height = 720;
@@ -25,7 +32,6 @@ if (typeof isServer != 'undefined' && isServer == true){
   isServer = false;
 }
 
-var m = {};// = new Map(width, height, true);
 var isClient = !isServer;
 
 function init(callback) {
@@ -54,36 +60,36 @@ function preload() {
 }
 
 function serverSetup() {
+  commonSetup();
   m = new Map(width, height, true);
-  for (var i = 0; i < 30; i ++) {
-    b = new Body(p5.random(width), p5.random(height), names[parseInt(p5.random(0, names.length-1))]);
-    console.log(b.name + " is born");
-    b.r = p5.random(10, 20);
-    b.age = parseInt(p5.random(0, 6000));
-    bodies.push(b);
-  }
 }
 
 function setup(){
   canv = createGraphics(1280, 720);
   setFrameRate(30);
   if (typeof io == "undefined") {
-    for (var i = 0; i < 30; i ++) {
-      var b = new Body(random(width), random(height), names[parseInt(p5.random(0, names.length-1))]);
-      if (b.type == WORKER || b.type == ENFORCER) {
-        b.location.x = random(width/2, width);
-      } else {
-       b.location.x = random(0, width/4);
-      } 
-      Log(b.name + " the " + b.role() + " is born");
-      b.r = random(10, 20);
-      b.age = random(0, 6000);
-      bodies.push(b);
-    }
+    commonSetup();
     m = new Map(width, height, true);
   }
 }
 
+function commonSetup() {
+  //console.log(m);
+  for (var i = 0; i < 30; i ++) {
+    var b = new Body(random(width), random(height), names[parseInt(p5.random(0, names.length-1))]);
+    if (b.type == WORKER || b.type == ENFORCER) {
+      b.location.x = random(width/2, width);
+    } else {
+      b.location.x = random(width/4);
+      //b.location.x = random(width/4, width * 3/4);
+      //b.location.y = random(height/4, height * 3/4);
+    } 
+    Log(b.name + " the " + b.role() + " is born.", "birth");
+    b.r = random(10, 20);
+    b.age = random(0, 6000);
+    bodies.push(b);
+  }
+}
 
 function draw() {
   //console.log(currentFrame);
@@ -93,7 +99,7 @@ function draw() {
     toFollow = bodies[follower];
   }
 
-  background(250);
+  background(240);
 
   if (follow && typeof toFollow != "undefined") {
     scale(sc);
@@ -119,10 +125,14 @@ function draw() {
   }
   currentFrame ++;
   timeNow = millis();
-  fill(0);
-  text("fps: " + (timeNow - lastDrawn + "  time: " + currentFrame + "  total verme: " + bodies.length), 10, 10);
-  lastDrawn = timeNow;
 
+  fps = Math.floor(1000/(timeNow - lastDrawn));
+
+  fill(0);
+  textSize(12);
+  text("fps: " + fps + "  time: " + currentFrame + "  total verme: " + bodies.length, 10, 20);
+
+  lastDrawn = timeNow;
   resetIfNeeded();
 }
 
@@ -141,7 +151,7 @@ function checkPregnancy(b) {
     var baby = new Body(b.location.x, b.location.y, names[parseInt(p5.random(0, names.length-1))]);
     baby.type = b.type;
     baby.name = baby.name + " " + generateLastName(b.matedWith, b);
-    Log(baby.name + " the " + baby.role() + " is born");
+    Log(baby.name + " the " + baby.role() + " is born.", "birth");
     bodies.push(baby);
     b.pregnant = false;
     b.matedWith = false;
@@ -153,7 +163,7 @@ function checkPregnancy(b) {
 
 function checkMortality(b, i) {
   if (!b.alive) {
-    Log(b.name + " has died of " + b.causeOfDeath + ". R.I.P.");
+    Log(b.name + " has died of " + b.causeOfDeath + ". R.I.P.", "death");
     bodies.splice(i, 1);
     m.plant(b.location);
     return i;
@@ -161,6 +171,18 @@ function checkMortality(b, i) {
     return false;
   }
 }
+
+function generateLastName(father, mother) {
+  var vowels = "[aeiou]";
+  var fatherLastName = father.name.split(" ")[1];
+  var motherLastName = mother.name.split(" ")[1];
+  var lastname = "";
+  if (typeof fatherLastName != "undefined") { lastname = fatherLastName; }
+  else if (typeof motherLastName != "undefined") { lastname = motherLastName; }
+  else { lastname = father.name.substr(0, father.name.search(vowels) + 1) + mother.name.substr(0, mother.name.search(vowels) + 1); }
+  return lastname.charAt(0).toUpperCase() + lastname.substr(1).toLowerCase();
+}
+
 
 //function mouseWheel(event) {
 //var e = event.wheelDelta;
@@ -200,20 +222,26 @@ function keyReleased() {
 }
 
 function keyPressed() {
-  if (keyCode == 38) {
-    toFollow.go("up");
-  }
+  //if (keyCode == 38) {
+    //toFoll.go("up");
+  //}
 
-  if (keyCode == 40) {
-    toFollow.go("down");
-  }
+  //if (keyCode == 40) {
+    //toFollow.go("down");
+  //}
 
   if (keyCode == 37) {
-    toFollow.go("left");
+    //toFollow.go("left");
+    toFollow.type --;
+    if (toFollow.type < 0) toFollow.type = 2;
+    socket.emit('changeClass', {i: follower, b: toFollow});
   }
 
   if (keyCode == 39) {
-    toFollow.go("right");
+    toFollow.type ++;
+    if (toFollow.type > 2) toFollow.type = 0;
+    socket.emit('changeClass', {i: follower, b: toFollow});
+    //toFollow.go("right");
   }
 
   if (keyCode == 80) {

@@ -2,12 +2,11 @@ function Map(w, h, withFood) {
   this.w = w;
   this.h = h;
   this.cellsize = 70;
-  this.foodSize = this.cellsize/5;
+  this.foodSize = Math.floor(this.cellsize/5);
   this.rows = width/this.cellsize;
   this.cols = width/this.cellsize;
-
-  this.bg = p5.color(240);
   this.food = [];
+  this.grid = [];
   if (withFood) {
     this.plantFood();
   }
@@ -15,13 +14,21 @@ function Map(w, h, withFood) {
 
 Map.prototype.plantFood = function() {
   var foodSize = this.foodSize;
+
   for (var x = 0; x < this.w; x+=this.cellsize) {
     for (var y = 0; y < this.h; y+=this.cellsize) {
-      if (random() < .1) {
-        for (var x1 = x; x1 < this.cellsize + x; x1+=foodSize) {
-          for (var y1 = y; y1 < this.cellsize + y; y1+=foodSize) {
-            var f = new Food(x1, y1, foodSize);// + random(1, 5));
-            f.age = 1000;
+      var rand = random();
+      for (var x1 = x; x1 < this.cellsize + x; x1+=foodSize) {
+        for (var y1 = y; y1 < this.cellsize + y; y1+=foodSize) {
+          if (typeof this.grid[x1/foodSize] == "undefined") this.grid[x1/foodSize] = [];
+          var plantable = Math.abs(noise.perlin2(x1/500, y1/500)) < .07;
+          this.grid[x1/foodSize][y1/foodSize] = plantable;
+          if (rand < .1 && plantable === true) {
+          //if (plantable === true) {
+            var f = new Food(x1, y1, foodSize);
+            f.age = 800;
+            //f.ownedBy = Math.abs(noise.perlin2(x1/500, y1/500)) < .05 ? 0 : 2;
+            this.grid[x1/foodSize][y1/foodSize] = f;
             this.food.push(f);
           }
         }
@@ -34,6 +41,32 @@ Map.prototype.plant = function(loc) {
   this.food.push(new Food(loc.x, loc.y, this.foodSize));
 };
 
+Map.prototype.shouldPlant = function(loc) {
+  return false;
+  var x = Math.floor(loc.x/this.foodSize);
+  var y = Math.floor(loc.y/this.foodSize);
+  //if (typeof this.grid[x] != "undefined") Log(this.grid[x][y]);
+  if (this.grid[x] && this.grid[x][y]) {
+    for (var i = 0; i < this.food.length; i++) {
+      if (this.food[i].location.x == x && this.food[i].location.y == y) {
+        return false;
+      }
+    }
+    return true;
+  } else {
+    return false;
+  }
+};
+
+Map.prototype.grow = function(food) {
+  var l = food.location;
+  var x = l.x / this.foodSize;
+  var y = l.y / this.foodSize
+  if (this.grid[x] && this.grid[x+1][y]) {
+    this.plant((x+1) * this.foodSize, y * this.foodSize, this.foodSize);
+  }
+}
+
 Map.prototype.run = function() {
   this.update();
   this.display();
@@ -45,30 +78,10 @@ Map.prototype.update = function() {
     if (this.food[i].eatenBy) {
       this.food[i].checkPermissions(this.food[i].eatenBy);
       //if (this.food[i].r < 1) {
+      this.grid[Math.floor(this.food[i].location.x / this.foodSize)][Math.floor(this.food[i].location.y / this.foodSize)] = true;
       this.food.splice(i, 1);
     }
   }
-
-  //if (random(1) < .03) {
-    //var i = Math.floor(random(this.food.length)) - 1;
-    //var f = this.food[i];
-
-    ////this.food.push(new Food(random(width), random(height), this.foodSize));
-    //var dir = Math.floor(random(1, 4));
-    //var growX = f.location.x - f.r;
-    //var growY = f.location.y;
-    //if (dir == 1) {
-      //growX = f.location.x;
-      //growY = f.location.y - f.r;
-    //} else if (dir == 2) {
-      //growX = f.location.x + f.r;
-      //growY = f.location.y;
-    //} else if (dir == 3) {
-      //growX = f.location.x;
-      //growY = f.location.y + f.r;
-    //}
-    //this.food.push(new Food(growX, growY, this.foodSize));// + random(1, 5)));
-  //}
 };
 
 Map.prototype.bodiesEatFood = function(bodies) {

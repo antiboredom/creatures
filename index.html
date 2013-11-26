@@ -4,9 +4,12 @@
 var p5 = window;
 var startedAt = 0;
 var currentFrame = 0;
+var frameCount = 0;
+var perlinSeed = Math.random();
 </script>
 <script src="http://qua.local:8000/socket.io/socket.io.js"></script>
 <script language="javascript" type="text/javascript" src="p5/dist/p5.js"></script>
+<script language="javascript" type="text/javascript" src="noise.js"></script>
 <script language="javascript" type="text/javascript" src="body.js"></script>
 <script language="javascript" type="text/javascript" src="map.js"></script>
 <script language="javascript" type="text/javascript" src="food.js"></script>
@@ -15,16 +18,23 @@ var currentFrame = 0;
 
 <script>
 if (typeof io != "undefined") {
-  noLoop();
+  //noLoop();
+  //var socket = io.connect('http://sim.nodejitsu.com:80');
   var socket = io.connect('http://qua.local:8000');
   socket.on('setup', function(data) {
+    perlinSeed = data.perlinSeed;
+    noise.seed(perlinSeed);
     var tempmap = data.m;
     m = new Map(tempmap.w, tempmap.h, false);
+    //console.log(m);
     for (var i = 0; i < tempmap.food.length; i ++) {
-      var tempf = map.food[i];
+      var tempf = tempmap.food[i];
       var f = new Food(tempf.location.x, tempf.location.y, tempf.r);
       updateAttributes(f, tempf);
       m.food.push(f);
+    }
+    for (var i = 0; i < tempmap.grid.length; i ++) {
+      m.grid[i] = tempmap.grid[i];
     }
     bodies = [];
     currentFrame = data.startedAt;
@@ -35,12 +45,12 @@ if (typeof io != "undefined") {
       bodies.push(b2);
     }
     randomseed(data.seed);
-    loop();
+    //loop();
   });
 
   setInterval(function() {
     socket.emit('ping', {clientMoments: currentFrame});
-  }, 100);
+  }, 10000);
 
   socket.on('timecheck', function(data) {
     //total frames between now and next check = 1000/frameRate
@@ -57,6 +67,7 @@ if (typeof io != "undefined") {
    //   }
   });
 }
+
 </script>
 <style type="text/css" media="all">
 body {
@@ -65,9 +76,8 @@ body {
   margin:0;
 }
 canvas {
-  width: 80%;
+  /*width: 80%;*/
 }
-//canvas {left: 50% !important; margin-left: -640px; top: 50% !important; margin-top: -360px; }
 #log {
   float:right; margin:0; padding:0; background: #333; color: #fff; border:0; width: 300px; height: 720;overflow-y:scroll;font:12px sans-serif;line-height:130%;
   width: 20%;
@@ -84,6 +94,34 @@ canvas {
 
 #log p:nth-child(even) {
   background-color:#444;
+}
+
+#log p span { 
+  opacity: .7; 
+  float: left;
+  width: 14px;
+  height: 14px;
+  margin-right: 5px;
+  border-radius: 14px;
+}
+
+#log p.birth span{
+  background-color: #2d90d7;
+  background-color: #40ff3d;
+  background-color: #fff49d;
+}
+
+#log p.sex span{
+  background-color: #ff63f9;
+}
+
+#log p.death span, #log p.murder span{
+ background-color: #000000; 
+}
+
+#log p.theft span{
+  background-color: #ff1b00;
+  background-color: #ff5d55;
 }
 </style>
 </head>
