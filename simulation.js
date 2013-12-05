@@ -68,6 +68,7 @@ function setup(){
   canv = createGraphics(1280, 720);
   setFrameRate(30);
   if (typeof io == "undefined") {
+    noise.seed(perlinSeed);
     commonSetup();
     m = new Map(width, height, true);
   }
@@ -165,7 +166,7 @@ function checkMortality(b, i) {
   if (!b.alive) {
     Log(b.name + " has died of " + b.causeOfDeath + ". R.I.P.", "death");
     bodies.splice(i, 1);
-    m.plant(b.location);
+    //m.plant(b.location);
     return i;
   } else {
     return false;

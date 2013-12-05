@@ -52,6 +52,8 @@ Food.prototype.display = function() {
   fill(151, this.ownedBy == WORKER ? 180 : 231, 140);//0, 200, 0, 100);
   var r = p5.map(this.age, 0, RIPE, 1, this.r + 8);
   ellipse(this.location.x, this.location.y, r, r);
+  //rectMode(CENTER);
+  //rect(this.location.x, this.location.y, r, r);
 };
 
 Food.prototype.eat = function(body) {

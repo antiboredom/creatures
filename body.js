@@ -44,7 +44,7 @@ var roles = ["owner", "enforcer", "worker"];
 
 var NERVOUS = 1;
 
-var fear = ["nervous", "anxious", "frightened", "terrified"];
+var fear = ["", "nervous", "anxious", "frightened", "terrified"];
 
 //HAPPY
 //EXCITED
@@ -100,9 +100,11 @@ function Body(x, y, name) {
   this.health = 0;
   this.targetedIndividual = false;
   this.matedWith = false;
-  this.carrying = false;
   this.gender = random() < .5 ? -1 : 1;
   this.fear = 0;
+  this.kidnappedBy = false;
+  this.carrying = false;
+  this.carryTarget = false;
 }
 
 
@@ -118,26 +120,34 @@ Body.prototype.update = function(bodies, m) {
   }
 
   this.personalContact(bodies);
-  //if (this.type == WORKER && this.age < CHILD && Math.floor(this.location.x % m.foodSize) == 0 && Math.floor(this.location.y % m.foodSize) == 0) {
-  //if (this.type == WORKER && this.age < CHILD && m.shouldPlant(this.location)) {
+
+  if (typeof this.carrying == "object") {
+    if (this.carryTarget.dist(this.location) < this.r + 5) {
+      Log("release!", "");
+      this.carrying.kidnappedBy = false;
+      this.carrying = false;
+    }
+  }
+
   if (m.shouldPlant(this.location)) {
     m.plant(this.location);
   }
 
   this.hunger += .003;
 
-  //for (var i = 0; i < m.food.length; i++) {
-    //var food = m.food[i];
-    //if (food.location.dist(this.location) < food.r / 2 + this.r/2 + 2) {
-      //this.eat(food);
-    //}
-  //}
-
   this.velocity.add(this.acceleration);
   this.velocity.limit(this.maxspeed);
   this.location.add(this.velocity);
   this.borders();
   this.acceleration.mult(0);
+
+  if (typeof this.kidnappedBy == "object") {
+    var newVel = new PVector(this.kidnappedBy.velocity.x, this.kidnappedBy.velocity.y);
+    var newLoc = new PVector(this.kidnappedBy.location.x, this.kidnappedBy.location.y);
+    this.location = PVector.sub(newLoc, newVel.mult(14));
+    //this.velocity.x = this.kidnappedBy.velocity.x;
+    //this.velocity.y = this.kidnappedBy.velocity.y;
+  }
 }
 
 Body.prototype.runOnServer = function(bodies, m) {
@@ -221,7 +231,8 @@ Body.prototype.applyBehaviors = function(bodies, m) {
   sep.mult(this.sepWeight);
   this.applyForce(sep);
 
-  this.attackWeight = 0;
+  this.kidnapWeight = -1;
+  this.attackWeight = -1;
   if (this.type == ENFORCER) {
     var attackVector = this.bloodLust(bodies);
     if (attackVector) {
@@ -233,7 +244,35 @@ Body.prototype.applyBehaviors = function(bodies, m) {
       this.attackWeight = 0;
       this.emotion = 0;
     }
+
+    if (this.carrying === false) {
+      this.kidnapWeight = this.urgeToKidnap(bodies); 
+      if (this.kidnapWeight > 0) {
+        var kidnapVector = this.kidnap(bodies);
+        if (kidnapVector) {
+          kidnapVector.mult(this.kidnapWeight);
+          this.applyForce(kidnapVector);
+        }
+      }
+    } else {
+      this.kidnapWeight = 3;
+      var kidnapVector = this.seek(this.carryTarget);
+      kidnapVector.mult(this.kidnapWeight);
+      this.applyForce(kidnapVector);
+    }
+
   }
+
+  if (this.type == WORKER && typeof this.kidnappedBy == "object") {
+    //this.stockholmWeight = 10;
+    //var stockholmVector = this.seek(this.kidnappedBy.location);
+    //stockholmVector.mult(this.stockholmWeight);
+    //this.applyForce(stockholmVector);
+    //this.maxspeed = this.kidnappedBy.maxspeed;
+    //this.location.x = this.kidnappedBy.location.x;
+    //this.location.y = this.kidnappedBy.location.y;
+  }
+
 }
 
 Body.prototype.display = function() {
@@ -290,7 +329,7 @@ Body.prototype.display = function() {
     textSize(10);
     text(this.name + " the " + this.role(), this.location.x + this.r, this.location.y);
     textSize(9);
-    text(this.hungerToS() + " " + this.ageToS(), this.location.x + this.r, this.location.y + 12);
+    text(this.fearToS() + this.hungerToS() + " " + this.ageToS(), this.location.x + this.r, this.location.y + 12);
     text("wants to " + this.desireToS(), this.location.x + this.r, this.location.y + 24);
   }
 }
@@ -333,6 +372,13 @@ Body.prototype.hungerToS = function() {
   return toReturn;
 }
 
+Body.prototype.fearToS = function() {
+  var f = fear[this.fear];
+  if (typeof f == "undefined") f = fear[fear.length-1];
+  if (f.length > 0) return f + " ";
+  else return "";
+}
+
 Body.prototype.ageToS = function() {
   var toReturn = "new born";
   if (this.age > 0 && this.age < INFANT) {
@@ -371,8 +417,8 @@ Body.prototype.ageToS = function() {
 }
 
 Body.prototype.desireToS = function() {
-  var desireNames = ["mate", "eat", "farm", "attack", "wander"];
-  var desires = [[this.mateWeight, "mate"], [this.seekFoodWeight, "eat"], [this.farmWeight, "farm"], [this.attackWeight, "kill"], [this.wanderWeight, "wander"]].sort(function(a,b) { return b[0] - a[0] }); 
+  //var desireNames = ["kidnap", "mate", "eat", "farm", "attack", "wander"];
+  var desires = [[this.mateWeight, "mate"], [this.seekFoodWeight, "eat"], [this.farmWeight, "farm"], [this.kidnapWeight, "kidnap"], [this.attackWeight, "kill"], [this.wanderWeight, "wander"]].sort(function(a,b) { return b[0] - a[0] }); 
   return desires[0][1] + " and " + desires[1][1];
   //return "mate: " + this.mateWeight + " eat " + this.seekFoodWeight +  " farm: " + this.farmWeight + " kill " + this.attackWeight + " wander " + this.wanderWeight
 };
@@ -396,22 +442,36 @@ Body.prototype.personalContact = function(bodies) {
   for (var i = 0; i < bodies.length; i++) {
     var b = bodies[i];
     if (this != b && this.location.dist(b.location) < 10 ) {
-      if (this.emotion == HOSTILE && b.type == WORKER) {
-        //Log(this.name + " has viciously attacked and murdered " + b.name);
+
+      //private property protection
+      if (this.emotion == HOSTILE && b.type == WORKER && this.carrying != b) {
         this.hunger --;
         b.r --;
         if (b.r < 1) {
           b.alive = false;
+          this.intimidate(bodies, 100, 4);
           b.causeOfDeath = "vermecide";
           Log(this.name + " has viciously attacked and murdered " + b.name, "murder");
         }
       }
+
+      //kidnaping
+      if (this.type == ENFORCER && b.type == WORKER && this.kidnapWeight > 2 && b.kidnappedBy === false && this.carrying === false) {
+        this.carrying = b;
+        b.kidnappedBy = this;
+        this.carryTarget = new PVector(random(width/2), random(height));
+        Log(this.name + " kidnaps " + b.name, "kidnap");
+      }
+
+      //mating
       if (b.type == this.type && this.emotion != HOSTILE && b.emotion != HOSTILE && millis() - this.lastPregnant > 1000 && this.age > ADOLESCENT && this.age < MIDDLEAGE && random(1) > .5) {
         Log(this.name + " and " + b.name + " have mated!", "sex");
         this.pregnant = true;
         this.matedWith = b;
         this.lastPregnant = millis();
       }
+
+
     }
   }
 }
@@ -553,6 +613,7 @@ Body.prototype.seekClosestFood = function(m) {
 
   for (var i = 0; i < m.food.length; i++) {
     var food = m.food[i];
+    if (this.type == WORKER && food.ownedBy != WORKER && this.fear > 1) continue;
     if (food.ripe()) {
       var distance = food.location.dist(this.location); 
       if (distance < sep && distance < closest) {
@@ -568,6 +629,26 @@ Body.prototype.seekClosestFood = function(m) {
     return false;
   }
 
+}
+
+Body.prototype.seekClosest = function(bodies) {
+  var target = false;
+  var closest = 10000;
+
+  for (var i = 0; i < bodies.length; i++) {
+    var b = bodies[i];
+    var dist = b.location.dist(this.location);
+    if (dist < closest) {
+      closest = dist;
+      target = b.location;
+    }
+  }
+
+  if (target) {
+    return this.seek(target);
+  } else {
+    return false;
+  }
 }
 
 Body.prototype.gatherFood = function(m) {
@@ -594,97 +675,25 @@ Body.prototype.gatherFood = function(m) {
       count++;
     }
 
-    if (food.ripe() && distance < food.r / 2 + this.r/2 + 2) {
-      if (this.hungry) { this.eat(food); }
-    }
-
-    //if (distance < food.r / 2 + this.r/2) {
-      //this.velocity = this.velocity.mult(-1);
-    //}
-  }
-
-  if (count > 0) {
-    sum.div(count);
-    // Our desired vector is the average scaled to maximum speed
-    sum.normalize();
-    sum.mult(this.maxspeed);
-    steerV = PVector.sub(sum, this.velocity);
-    steerV.limit(this.maxforce);
-    //obstacleWeight = 3;
-    //wanderWeight = 1;
-  }
-  else {
-    //obstacleWeight = 0.0;
-    //wanderWeight = .1;
-  }
-
-  return steerV;
-}
-
-Body.prototype.obstacleSeparation = function(m) {
-  var steerV = new PVector();
-  var desired = new PVector();
-  var sep = this.r;
-  var sum = new PVector();
-  var count = 0;
-
-  for (var x = parseInt(this.location.x - sep/2); x < this.location.x + sep/2; x ++) {
-    for (var y = parseInt(this.location.y - sep/2); y < this.location.y + sep/2; y ++) {
-      var food = m.blocked(x, y);
-      if (dist(this.location.x, this.location.y, x, y) < sep/2 && food) {
-        var tempV = new PVector(x,y);
-        var d = PVector.dist(this.location, tempV);
-        var diff;
-        if (this.hungry) {
-          diff = PVector.sub(tempV, this.location);
-          //this.eat(food);
-        }
-        else {
-          diff = PVector.sub(this.location, tempV);
-        }
-        diff.normalize();
-        diff.div(d); // Weight by distance
-        sum.add(diff);
-        count++;
+    if (this.hungry && food.ripe() && distance < food.r / 2 + this.r/2 + 2) {
+      if (this.type == WORKER && this.fear >= 3 && food.ownedBy != WORKER) {
+        //do nothing
+      } else {
+        this.eat(food);
       }
     }
   }
 
   if (count > 0) {
-    //println(name + " has a meal");
-
     sum.div(count);
-    // Our desired vector is the average scaled to maximum speed
     sum.normalize();
     sum.mult(this.maxspeed);
     steerV = PVector.sub(sum, this.velocity);
     steerV.limit(this.maxforce);
-    //obstacleWeight = 3;
-    //wanderWeight = 1;
-  } 
-  else {
-    //obstacleWeight = 0.0;
-    //wanderWeight = .1;
   }
 
   return steerV;
 }
-
-
-Body.prototype.flock = function() {
-  var sep = this.separate();   // Separation
-  var ali = this.align();      // Alignment
-  var coh = this.cohesion();   // Cohesion
-  // Arbitrarily weight these forces
-  sep.mult(1.5);
-  ali.mult(1.0);
-  coh.mult(1.0);
-  // Add the force vectors to acceleration
-  this.applyForce(sep);
-  this.applyForce(ali);
-  this.applyForce(coh);
-}
-
 
 // Separation
 // Method checks for nearby boids and steers away
@@ -692,28 +701,23 @@ Body.prototype.separate = function(bodies) {
   var desiredseparation = 25.0;
   var steerV = new PVector(0, 0, 0);
   var count = 0;
-  // For every boid in the system, check if it's too close
   for (var i = 0; i < bodies.length; i++) {
     var other = bodies[i];
     var d = PVector.dist(this.location, other.location);
-    // If the distance is greater than 0 and less than an arbitrary amount (0 when you are yourself)
     if ((d > 0) && (d < desiredseparation)) {
-      // Calculate vector povaring away from neighbor
       var diff = PVector.sub(this.location, other.location);
       diff.normalize();
-      diff.div(d);        // Weight by distance
+      diff.div(d);
       steerV.add(diff);
-      count++;            // Keep track of how many
+      count++;
     }
   }
-  // Average -- divide by how many
+
   if (count > 0) {
     steerV.div(count);
   }
 
-  // As long as the vector is greater than 0
   if (steerV.mag() > 0) {
-    // Implement Reynolds: Steering = Desired - Velocity
     steerV.normalize();
     steerV.mult(this.maxspeed);
     steerV.sub(this.velocity);
@@ -722,55 +726,44 @@ Body.prototype.separate = function(bodies) {
   return steerV;
 }
 
-// Alignment
-// For every nearby boid in the system, calculate the average velocity
-Body.prototype.align = function(bodies) {
-  var neighbordist = 50;
-  var sum = new PVector(0, 0);
-  var count = 0;
+Body.prototype.stockholm = function(bodies) {
+  // body...
+};
+
+Body.prototype.urgeToKidnap = function(bodies) {
+  var sum = 0;
   for (var i = 0; i < bodies.length; i++) {
-    var b = bodies[i];
-    var d = PVector.dist(this.location, other.location);
-    if ((d > 0) && (d < neighbordist)) {
-      sum.add(other.velocity);
-      count++;
-    }
+    if (bodies[i].location.x < width/2) sum ++;
   }
-  if (count > 0) {
-    sum.div(count);
-    sum.normalize();
-    sum.mult(this.maxspeed);
-    var steerV = PVector.sub(sum, this.velocity);
-    steerV.limit(this.maxforce);
-    return steerV;
-  }
-  else {
-    return new PVector(0, 0);
-  }
+  return map(sum/bodies.length, 0, 1, 3, 0);
 }
 
-// Cohesion
-// For the average location (i.e. center) of all nearby boids, calculate steering vector towards that location
-Body.prototype.cohesion = function(bodies) {
-  var neighbordist = 50;
-  var sum = new PVector(0, 0);   // Start with empty vector to accumulate all locations
-  var count = 0;
+Body.prototype.kidnap = function(bodies) {
+  var shortList = [];
   for (var i = 0; i < bodies.length; i++) {
     var b = bodies[i];
-    var d = PVector.dist(this.location, other.location);
-    if ((d > 0) && (d < neighbordist)) {
-      sum.add(other.location); // Add location
-      count++;
+    if (b.type == WORKER && b.location.x > width / 2) shortList.push(b);
+  }
+
+  return shortList.length > 0 ? this.seekClosest(shortList) : false;
+};
+
+Body.prototype.deliverVictim = function() {
+  return this.seek(this.deliveryLocation);
+};
+
+Body.prototype.setDeliveryLocation = function() {
+  this.deliveryLocation = new PVector(random(width/2), random(height));
+};
+
+Body.prototype.intimidate = function(bodies, range, intensity) {
+  for (var i = 0; i < bodies.length; i++) {
+    var b = bodies[i];
+    if (b.location.dist(this.location) < range && b.type == WORKER) {
+      b.fear += intensity;
     }
   }
-  if (count > 0) {
-    sum.div(count);
-    return seek(sum);  // Steer towards the location
-  }
-  else {
-    return new PVector(0, 0);
-  }
-}
+};
 
 Body.prototype.borders = function() {
   if (this.location.x < -this.r) this.location.x = width+this.r;
